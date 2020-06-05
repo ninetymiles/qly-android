@@ -1,4 +1,7 @@
 apply plugin: 'com.android.application'
+apply plugin: 'maven-publish'
+
+version '0.9.0-SNAPSHOT'
 
 android {
     compileSdkVersion 29
@@ -10,7 +13,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 29
 
-        versionName "0.9.0"
+        versionName project.version
         versionCode Integer.parseInt(([ 'git','rev-list','--count','HEAD'].execute().text).trim())
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -40,4 +43,51 @@ dependencies {
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+}
+
+afterEvaluate {
+    android.applicationVariants.all { variant ->
+        //println(“variant.name:" + variant.name)
+        //println(“variant.baseName:" + variant.baseName)
+        //println("variant.flavorName:" + variant.flavorName)
+
+        if (!variant.buildType.isDebuggable()) {
+            publishing.publications.create(variant.name, MavenPublication) {
+                groupId "com.rex"
+                artifactId "qly"
+
+                // Since Android Gradle 3.6.0
+                // Ref: https://developer.android.google.cn/studio/build/maven-publish-plugin?hl=zh-cn
+                // Will generate ZIP contains APK and mapping TXT
+                //from components.getByName("${variant.name}_apk")
+
+                // Publish default APK package, for ApplicationVariant ApkVariant
+                artifact (new File(variant.packageApplicationProvider.get().getOutputDirectory().getAsFile().get(), variant.outputs[0].outputFileName)) {
+                    builtBy variant.assembleProvider.get()
+                }
+
+                // Publish mapping TXT
+                if (!variant.getMappingFileProvider().get().isEmpty()) {
+                    artifact project.tasks.create("generateMappingZipFor${name.capitalize()}Publication", Zip) {
+                        classifier "mapping"
+                        group "publishing"
+                        baseName variant.baseName // Default ${project.name}-mapping.zip may conflict with other flavors
+                        from variant.getMappingFileProvider().get()
+                    }
+                }
+
+                // Publish native stack ZIP
+                if (! variant.externalNativeBuildProviders.isEmpty()) {
+                    artifact project.tasks.create("generateStackZipFor${name.capitalize()}Publication", Zip) {
+                        classifier "stack"
+                        group "publishing"
+                        baseName variant.baseName // Default ${project.name}-stack.zip may conflict with other flavors
+                        variant.externalNativeBuildProviders.each { provider ->
+                            from provider.get().objFolder
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
