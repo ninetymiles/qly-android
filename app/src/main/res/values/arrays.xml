@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="prefs_video_resolution_list">
+        <item>720P (1280x720)</item>
+        <item>1080P (1920x1080)</item>
+        <item>4K (3840x2160)</item>
+    </string-array>
+    <string-array name="prefs_video_resolution_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
+</resources>

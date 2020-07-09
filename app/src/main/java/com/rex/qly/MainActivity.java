@@ -1,11 +1,14 @@
 package com.rex.qly;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
+import com.rex.qly.preference.PreferenceViewActivity;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +40,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         sLogger.trace("");
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
+        switch (item.getItemId()) {
+        case R.id.action_settings:
+            startActivity(new Intent(this, PreferenceViewActivity.class));
             return true;
         }
         return super.onOptionsItemSelected(item);

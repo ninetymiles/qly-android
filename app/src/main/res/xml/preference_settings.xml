@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:key="@string/prefs_category_general_key"
+        android:title="@string/prefs_category_general_title">
+
+        <ListPreference
+            android:defaultValue="1"
+            android:entries="@array/prefs_video_resolution_list"
+            android:entryValues="@array/prefs_video_resolution_value"
+            android:key="@string/prefs_video_resolution_key"
+            android:summary="@string/prefs_video_resolution_summary"
+            android:title="@string/prefs_video_resolution_title" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="@string/prefs_category_about_key"
+        android:title="@string/prefs_category_about_title">
+
+        <Preference
+            android:summary="@string/about_app_summary"
+            android:title="@string/app_name" />
+        <Preference
+            android:key="@string/prefs_version_key"
+            android:summary="@string/about_version_summary"
+            android:title="@string/about_version_title" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">QianLiYan</string>
-    <string name="action_settings">Settings</string>
+
+    <!-- Main -->
+    <string name="menu_settings">Settings</string>
+
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
@@ -9,4 +12,32 @@
 
     <string name="hello_first_fragment">Hello first fragment</string>
     <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+
+    <!-- Preference -->
+    <string name="prefs_category_general_title">"General"</string>
+    <string name="prefs_category_general_key" translatable="false">"CATEGORY_GENERAL"</string>
+    <string name="prefs_category_experimental_title">"Experimental"</string>
+    <string name="prefs_category_experimental_key" translatable="false">CATEGORY_EXPERIMENTAL</string>
+    <string name="prefs_category_development_title">"Development"</string>
+    <string name="prefs_category_development_key" translatable="false">CATEGORY_DEVELOPMENT</string>
+    <string name="prefs_category_about_title">"About"</string>
+    <string name="prefs_category_about_key" translatable="false">CATEGORY_ABOUT</string>
+
+    <string name="prefs_about_key" translatable="false">KEY_ABOUT</string>
+    <string name="prefs_version_key" translatable="false">KEY_VERSION</string>
+    <string name="prefs_development_key" translatable="false">KEY_DEVELOPMENT</string>
+    <string name="prefs_experimental_key" translatable="false">KEY_EXPERIMENTAL</string>
+
+    <string name="prefs_video_resolution_key" translatable="false">KEY_VIDEO_RESOLUTION</string>
+    <string name="prefs_video_resolution_title">"Video resolution"</string>
+    <string name="prefs_video_resolution_summary" translatable="false">"%1$s"</string>
+
+    <!-- About -->
+    <string name="about_app_summary">"© 2020 RexStudio All rights reserved."</string>
+    <string name="about_version_title">"Version"</string>
+    <string name="about_version_summary" translatable="false">"%1$s r%2$d"</string>
+    <string name="about_toast_experimental">"Press %1$d more time(s) to enable experimental setting"</string>
+    <string name="about_toast_experimental_on">"Already enabled experimental settings"</string>
+    <string name="about_toast_development_on">"Already enabled development settings"</string>
+
 </resources>
