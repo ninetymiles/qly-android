@@ -41,24 +41,29 @@
 <script type="text/javascript" src="js/jcanvas.min.js"></script>
 <script language="javascript">
 var cavs; // Canvas jQuery object
-var cavsX;
-var cavsY;
 var ws;   // Websocket object
 var timer;// Websocket heartbeat timer
 $(function() {
     cavs = $("#canvas");
-    //cavsX = cavs.get(0).offsetLeft;
-    //cavsY = cavs.get(0).offsetTop;
-    //console.log("cavsX:" + cavsX + " cavsY:" + cavsY);
+    var canvas = cavs.get(0); // DOM object
+    canvas.width = cavs.width(); // Force enlarge the imageData
+    canvas.height = cavs.height();
+    //console.log("cavs:" + cavs + " width:" + cavs.width() + " height:" + cavs.height());
+    //console.log("canvas:" + canvas + " width:" + canvas.width + " height:" + canvas.height);
+
+    window.onresize = function() {
+        //console.log("window onresize innerWidth:" + window.innerWidth + " innerHeight:" + window.innerHeight);
+        var ctx = canvas.getContext("2d")
+        var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.putImageData(data, 0, 0);
+    }
 
     ws = new WebSocket("ws://" + window.location.hostname + ":5566");
     ws.onopen = function(ev) {
         console.log("onopen");
         $("#panel").hide();
-
-        //cavsX = cavs.get(0).offsetLeft;
-        //cavsY = cavs.get(0).offsetTop;
-        //console.log("cavsX:" + cavsX + " cavsY:" + cavsY);
 
         cavs.clearCanvas();
         timer = setInterval(onTimer, 20000);
@@ -85,10 +90,9 @@ function drawImage(blob) {
     var img = new Image();
     img.onload = function() {
         //console.log("onload image width:" + img.width + " height:" + img.height);
-        cavs.clearCanvas();
 
+        cavs.clearCanvas();
         var canvas = cavs.get(0);
-        var ctx = canvas.getContext("2d");
         //console.log("onload canvas width:" + canvas.width + " height:" + canvas.height);
 
         var scale = Math.min(canvas.width / img.width, canvas.height / img.height);
@@ -97,7 +101,7 @@ function drawImage(blob) {
         var x = (canvas.width - w) / 2;
         var y = (canvas.height - h) / 2;
         //console.log("onload scale:" + scale + " w:" + w + " h:" + h + " x:" + x + " y:" + y);
-        ctx.drawImage(img, x, y, w, h);
+        canvas.getContext("2d").drawImage(img, x, y, w, h);
     }
     img.src = URL.createObjectURL(blob);
 }
