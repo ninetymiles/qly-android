@@ -119,7 +119,6 @@ function onTimer() {
 function sendCapture() {
     if (ws != null) {
         var json = { "type": "capture" }
-        console.log(json);
         ws.send($.toJSON(json));
     }
 }
