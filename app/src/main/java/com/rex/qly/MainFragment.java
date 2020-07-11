@@ -1,17 +1,21 @@
 package com.rex.qly;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.ConnectivityManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Handler;
+import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -34,6 +38,7 @@ public class MainFragment extends Fragment {
 
     private static final Logger sLogger = LoggerFactory.getLogger(MainFragment.class);
 
+    private AppServiceClient mServiceClient;
     private NetworkAddressDiscover mNetworkDiscover;
     private MainAddrAdapter mAddrAdapter;
     private List<InetAddress> mAddrList = new ArrayList<InetAddress>();
@@ -64,12 +69,40 @@ public class MainFragment extends Fragment {
     }
 
     @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        sLogger.trace("");
+        mNetworkDiscover = NetworkAddressDiscover.getInstance();
+        mNetworkDiscover.start();
+        mServiceClient = new AppServiceClient(getContext());
+        mServiceClient.connect(new AppService.ServerListener() {
+            @Override // AppService.ServerListener
+            public void onServerState(AppService.State state, int error) {
+                sLogger.trace("state:{} error:{}", state, error);
+                switch (state) {
+                case STARTING: postState(State.STARTING); break;
+                case STARTED: postState(State.STARTED);   break;
+                case STOPPING: postState(State.STOPPING); break;
+                case STOPPED: postState(State.STOPPED);   break;
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        sLogger.trace("");
+        mServiceClient.disconnect();
+        mNetworkDiscover.stop();
+        mNetworkDiscover = null;
+    }
+
+    @Override
     public void onStart() {
         super.onStart();
         sLogger.trace("");
-        mNetworkDiscover = NetworkAddressDiscover.getInstance();
         mNetworkDiscover.addObserver(mNetworkObserver);
-        mNetworkDiscover.start();
     }
 
     @Override
@@ -99,12 +132,6 @@ public class MainFragment extends Fragment {
             break;
         case STARTING:
             mButton.setEnabled(false);
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    postState(State.STARTED);
-                }
-            }, 100);
             break;
         case STOPPED:
             mButton.setEnabled(true);
@@ -112,12 +139,6 @@ public class MainFragment extends Fragment {
             break;
         case STOPPING:
             mButton.setEnabled(false);
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    postState(State.STOPPED);
-                }
-            }, 100);
             break;
         }
     }
@@ -128,15 +149,14 @@ public class MainFragment extends Fragment {
             sLogger.trace("mState:{}", mState);
             switch (mState) {
             case STARTED:
-                postState(State.STOPPING);
+                mServiceClient.stop();
                 break;
             case STOPPED:
-                postState(State.STARTING);
+                mServiceClient.start();
                 break;
             }
         }
     };
-
 
     private void updateNetInfo() {
         sLogger.trace("");
@@ -182,4 +202,66 @@ public class MainFragment extends Fragment {
             });
         }
     };
+
+    private class AppServiceClient implements ServiceConnection {
+        private final Context mContext;
+        private AppService mAppService;
+        private AppService.ServerListener mListener;
+        private boolean mPendingStart;
+        private boolean mPendingStop;
+        public AppServiceClient(Context ctx) {
+            sLogger.trace("");
+            mContext = ctx;
+        }
+        public void connect(AppService.ServerListener listener) {
+            sLogger.trace("");
+            mListener = listener;
+            mContext.bindService(new Intent(mContext, AppService.class), this, Context.BIND_AUTO_CREATE);
+        }
+        public void disconnect() {
+            sLogger.trace("");
+            mContext.unbindService(this);
+            if (mAppService != null && mListener != null) {
+                mAppService.removeServerListener(mListener);
+                mAppService = null;
+                mListener = null;
+            }
+            try {
+                mContext.unbindService(this);
+            } catch (IllegalArgumentException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        public void start() {
+            sLogger.trace("");
+            mPendingStart = true;
+            if (mAppService != null) {
+                mAppService.doStartServer();
+                mPendingStart = false;
+            }
+        }
+        public void stop() {
+            sLogger.trace("");
+            mPendingStop = true;
+            if (mAppService != null) {
+                mAppService.doStopServer();
+                mPendingStop = false;
+            }
+        }
+
+        @Override // ServiceConnection
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            sLogger.trace("");
+            mAppService = ((AppService.LocalBinder) service).getService();
+            if (mListener != null) mAppService.addServerListener(mListener);
+            if (mPendingStart) start();
+            if (mPendingStop) stop();
+        }
+        @Override // ServiceConnection
+        public void onServiceDisconnected(ComponentName name) {
+            sLogger.trace("");
+            mAppService = null;
+        }
+    }
 }

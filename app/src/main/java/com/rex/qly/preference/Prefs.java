@@ -4,8 +4,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Point;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 
 import com.rex.qly.R;
+
+import java.util.UUID;
 
 public class Prefs {
 
@@ -40,5 +43,14 @@ public class Prefs {
         default:
             return new Point(1280, 720);
         }
+    }
+
+    public String getUniqueId() {
+        String uniqueId = null;
+        String androidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
+        if (androidId != null) {
+            uniqueId = UUID.nameUUIDFromBytes(androidId.getBytes()).toString();
+        }
+        return mPrefs.getString(mContext.getString(R.string.prefs_unique_id_key), uniqueId);
     }
 }

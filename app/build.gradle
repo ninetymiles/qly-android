@@ -48,6 +48,9 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:1.7.25'
     implementation 'com.github.tony19:logback-android:2.0.0'
 
+    implementation 'org.nanohttpd:nanohttpd-webserver:2.3.1'
+    implementation 'org.nanohttpd:nanohttpd-websocket:2.3.1'
+
     testImplementation 'junit:junit:4.13'
     testImplementation 'androidx.test:core:1.2.0'
     testImplementation 'org.mockito:mockito-core:3.3.3'
@@ -114,4 +117,21 @@ afterEvaluate {
             }
         }
     }
+}
+
+task cleanWebRoot(type: Delete) {
+    description = "Clean HTML contents from assets"
+    group = "webapp"
+
+    delete "src/main/assets/www.zip"
+}
+
+task archiveWebRoot(dependsOn: [cleanWebRoot], type: Zip) {
+    description = "Deploy HTML contents into assets"
+    group = "webapp"
+
+    from "src/main/assets/www"
+
+    destinationDirectory.set(new File("src/main/assets"))
+    archiveFileName.set("www.zip")
 }

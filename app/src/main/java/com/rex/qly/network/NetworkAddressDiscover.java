@@ -77,8 +77,8 @@ public class NetworkAddressDiscover extends Observable {
     private Runnable mRunnable = new Runnable() {
         @Override
         public void run() {
-            mLogger.trace("+");
-            List<InetAddress> result = new ArrayList<InetAddress>();
+            //mLogger.trace("+");
+            List<InetAddress> result = new ArrayList<>();
             try {
                 for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
                     NetworkInterface intf = en.nextElement();
@@ -86,7 +86,7 @@ public class NetworkAddressDiscover extends Observable {
                         InetAddress addr = enumIpAddr.nextElement();
                         if (addr.isLinkLocalAddress()) continue; // Skip fe80::%dummy0 and fe80::%wlan0 auto-address configuration, neighbor discovery or when no routers are present
                         if (addr.isLoopbackAddress()) continue; // Skip 127.0.0.1 and ::1
-                        mLogger.trace("hostAddress {}", addr.getHostAddress());
+                        //mLogger.trace("hostAddress {}", addr.getHostAddress());
                         result.add(addr);
                     }
                 }
@@ -102,7 +102,7 @@ public class NetworkAddressDiscover extends Observable {
             } catch (Exception ex) {
                 mLogger.warn("Failed to notify - {}", ex.getMessage());
             }
-            mLogger.trace("-");
+            //mLogger.trace("-");
         }
     };
 }

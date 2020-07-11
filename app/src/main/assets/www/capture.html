@@ -1,0 +1,130 @@
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>HTML5 SOS</title>
+</head>
+<style type="text/css">
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+#container {
+    width: 99%;
+    height: 99%;
+    text-align: center;
+}
+#canvas {
+    background: #F8F8F8;
+    border: solid 1px #bbb;
+    margin-left: auto;
+    margin-right: auto;
+}
+#panel {
+    width: 100%;
+    background: #994444;
+    color: #EEEEEE;
+    padding: 6px;
+    text-align: center;
+    -moz-opacity: 0.6;
+    opacity: 0.6;
+}
+#controls {
+    background: #666666;
+    width: 100%;
+    padding: 4px;
+    -moz-opacity: 0.6;
+    opacity: 0.6;
+}
+</style>
+<script type="text/javascript" src="js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="js/jquery.json.min.js"></script>
+<script type="text/javascript" src="js/jcanvas.min.js"></script>
+<script language="javascript">
+var cavs; // Canvas jQuery object
+var cavsX;
+var cavsY;
+var ws;   // Websocket object
+var timer;// Websocket heartbeat timer
+$(function() {
+    cavs = $("#canvas");
+    //cavsX = cavs.get(0).offsetLeft;
+    //cavsY = cavs.get(0).offsetTop;
+    //console.log("cavsX:" + cavsX + " cavsY:" + cavsY);
+
+    ws = new WebSocket("ws://" + window.location.hostname + ":5566");
+    ws.onopen = function(ev) {
+        console.log("onopen");
+        $("#panel").hide();
+
+        //cavsX = cavs.get(0).offsetLeft;
+        //cavsY = cavs.get(0).offsetTop;
+        //console.log("cavsX:" + cavsX + " cavsY:" + cavsY);
+
+        cavs.clearCanvas();
+        timer = setInterval(onTimer, 20000);
+        sendCapture();
+    }
+    ws.onclose = function(ev) {
+        console.log("onclose");
+        doRelease();
+    }
+    ws.onerror = function(ev) {
+        console.log("onerror");
+        doRelease();
+    }
+    ws.onmessage = function(ev) {
+        if (ev.data instanceof Blob) {
+            //console.log("onmessage ev:" + ev.data + " size:" + ev.data.size);
+            drawImage(ev.data);
+        }
+    }
+});
+function drawImage(blob) {
+    //console.log("drawImage size:" + blob.size);
+
+    var img = new Image();
+    img.onload = function() {
+        //console.log("onload image width:" + img.width + " height:" + img.height);
+        cavs.clearCanvas();
+
+        var canvas = cavs.get(0);
+        var ctx = canvas.getContext("2d");
+        //console.log("onload canvas width:" + canvas.width + " height:" + canvas.height);
+
+        var scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+        var w = img.width * scale;
+        var h = img.height * scale;
+        var x = (canvas.width - w) / 2;
+        var y = (canvas.height - h) / 2;
+        //console.log("onload scale:" + scale + " w:" + w + " h:" + h + " x:" + x + " y:" + y);
+        ctx.drawImage(img, x, y, w, h);
+    }
+    img.src = URL.createObjectURL(blob);
+}
+function doRelease() {
+    $("#panel").show();
+    clearInterval(timer);
+    ws = null;
+}
+function onTimer() {
+    if (ws != null) {
+        var json = { "type": "heartbeat", "time": new Date().getTime() / 1000 }
+        ws.send($.toJSON(json));
+    }
+}
+function sendCapture() {
+    if (ws != null) {
+        var json = { "type": "capture" }
+        console.log(json);
+        ws.send($.toJSON(json));
+    }
+}
+</script>
+<body>
+    <div id="container">
+        <div id="panel">Server disconnected</div>
+        <canvas id="canvas" width="800px" height="600px">Your browser does not support the <code>&lt;canvas&rt;</code>-element.Please think about updating your brower!</canvas>
+    </div>
+</body>
+</html>
