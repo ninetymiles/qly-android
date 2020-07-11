@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.ConnectivityManager;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.LayoutInflater;
@@ -22,12 +20,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.rex.qly.network.NetworkAddressDiscover;
-import com.rex.qly.network.NetworkHelper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -160,16 +156,6 @@ public class MainFragment extends Fragment {
 
     private void updateNetInfo() {
         sLogger.trace("");
-
-        int wifiIpAddress = 0;
-        String wifiSSID = "";
-        WifiManager wifi = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        WifiInfo wifiInfo = wifi.getConnectionInfo();
-        if (wifiInfo != null) {
-            wifiIpAddress = wifiInfo.getIpAddress();
-            wifiSSID = wifiInfo.getSSID();
-        }
-
         mAddrAdapter.clear(mAddrList.size() == 0);
         for (InetAddress addr : mAddrList) {
             sLogger.trace("addr:{}", addr.getHostAddress());
@@ -177,12 +163,6 @@ public class MainFragment extends Fragment {
             model.addr = addr;
             model.type = ConnectivityManager.TYPE_ETHERNET;
             model.extra = null;
-            if (addr instanceof Inet4Address) { // Current can only get IPv4 address from WifiManager
-                if (wifiIpAddress == NetworkHelper.inetAddressToInt((Inet4Address) addr)) {
-                    model.type = ConnectivityManager.TYPE_WIFI;
-                    model.extra = wifiSSID;
-                }
-            }
             mAddrAdapter.add(model);
         }
     }
