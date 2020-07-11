@@ -1,0 +1,6 @@
+<resources>
+
+    <!-- For 7" and 10" device in landscape (~960dp and ~1280dp) -->
+    <dimen name="activity_horizontal_margin">64dp</dimen>
+
+</resources>
