@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -42,6 +43,7 @@ public class MainFragment extends Fragment {
     public enum State { STOPPED, STOPPING, STARTED, STARTING }
     private State mState = State.STOPPED;
 
+    private ImageView mImageStatus;
     private Button mButton;
 
     @Override
@@ -54,6 +56,8 @@ public class MainFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         sLogger.trace("");
 
+        mImageStatus = view.findViewById(R.id.main_image_status);
+
         mAddrAdapter = new MainAddrAdapter(R.layout.fragment_main_addr_item);
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.main_addr_recycler);
         recyclerView.setAdapter(mAddrAdapter);
@@ -61,7 +65,7 @@ public class MainFragment extends Fragment {
 
         mButton = view.findViewById(R.id.main_button);
         mButton.setOnClickListener(mOnClickListener);
-        invalidateButton();
+        invalidateUIState();
     }
 
     @Override
@@ -77,9 +81,9 @@ public class MainFragment extends Fragment {
                 sLogger.trace("state:{} error:{}", state, error);
                 switch (state) {
                 case STARTING: postState(State.STARTING); break;
-                case STARTED: postState(State.STARTED);   break;
+                case STARTED:  postState(State.STARTED);  break;
                 case STOPPING: postState(State.STOPPING); break;
-                case STOPPED: postState(State.STOPPED);   break;
+                case STOPPED:  postState(State.STOPPED);  break;
                 }
             }
         });
@@ -114,27 +118,31 @@ public class MainFragment extends Fragment {
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                invalidateButton();
+                invalidateUIState();
             }
         });
     }
 
     @UiThread
-    private void invalidateButton() {
+    private void invalidateUIState() {
         switch (mState) {
         case STARTED:
             mButton.setEnabled(true);
             mButton.setText(R.string.button_stop);
+            mImageStatus.setImageResource(R.drawable.ic_success_24dp);
             break;
         case STARTING:
             mButton.setEnabled(false);
+            mImageStatus.setImageResource(R.drawable.ic_process_24dp);
             break;
         case STOPPED:
             mButton.setEnabled(true);
             mButton.setText(R.string.button_start);
+            mImageStatus.setImageResource(R.drawable.ic_failed_24dp);
             break;
         case STOPPING:
             mButton.setEnabled(false);
+            mImageStatus.setImageResource(R.drawable.ic_process_24dp);
             break;
         }
     }
