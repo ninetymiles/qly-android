@@ -158,6 +158,8 @@ public class AppService extends Service {
         mWsServer = new WsServer(5566, mWsServerCallback);
 
         mNotifier.onCreate(this);
+
+        Rtmp rtmp = new Rtmp();
     }
 
     @Override
