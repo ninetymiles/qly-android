@@ -69,4 +69,4 @@ extern "C" {
 
 #endif /* #ifndef _LOGGING_H_ */
 
-// vim:ts=8:sw=4:
+// vim:ts=4:sw=4:et:

@@ -11,6 +11,8 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 
+import com.rex.qly.utils.Debug;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +20,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
-import java.util.Locale;
 
 // Ref to http://developer.android.com/guide/appendix/media-formats.html
 // AVC  720P suggest  2Mbps
@@ -40,8 +41,8 @@ public class SurfaceRecorder {
 
     public interface OutputCallback {
         void onFormat(int width, int height);
-        void onConfig(ByteBuffer buffer);
-        void onFrame(ByteBuffer buffer, long pts);
+        void onConfig(ByteBuffer sps, ByteBuffer pps);
+        void onFrame(ByteBuffer buffer, int offset, int size, long pts);
         void onEnd();
     }
 
@@ -137,16 +138,31 @@ public class SurfaceRecorder {
                             }
                         } else if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) > 0) { // pts may be zero
                             mLogger.info("Got CODEC_CONFIG - {}", outBuffer.remaining());
-                            //mLogger.debug("<{}>", dumpByteBuffer(outputBuffer, info.offset, info.size));
+                            mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, info.size));
                             // Nexus9 may provide valid PTS, Pixel may provide zero PTS
                             // e.g. 00 00 00 01 67 42 C0 20 E9 01 78 13 BC B2 C0 3C 22 11 A8 00 00 00 01 68 CE 06 E2
-                            if (mOutputCallback != null) {
-                                mOutputCallback.onConfig(outBuffer);
-                            }
+                            //if (mOutputCallback != null) {
+                            //    mOutputCallback.onConfig(outBuffer, info.offset, info.size);
+                            //}
                         } else {
-                            mLogger.info("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
+                            if ((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) > 0) {
+                                MediaFormat format = codec.getOutputFormat(index);
+                                ByteBuffer spsBuffer = format.getByteBuffer("csd-0");
+                                ByteBuffer ppsBuffer = format.getByteBuffer("csd-1");
+                                mLogger.debug("SPS:<{}>", Debug.dumpByteBuffer(spsBuffer, 0, spsBuffer.remaining()));
+                                mLogger.debug("PPS:<{}>", Debug.dumpByteBuffer(ppsBuffer, 0, ppsBuffer.remaining()));
+                                if (mOutputCallback != null) {
+                                    mOutputCallback.onConfig(spsBuffer, ppsBuffer);
+                                }
+                                // FIXME: Some device may auto include SPS and PPS in IDR frame, need remove it manually
+                                mLogger.info("Got KEY_FRAME - {}", outBuffer.remaining());
+                            } else {
+                                mLogger.info("Got FRAME - {}", outBuffer.remaining());
+                            }
+                            // FIXME: Convert Annex-B to Avcc, avoid mixing with SEI frame still contain csd
+                            mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
                             if (mOutputCallback != null) {
-                                mOutputCallback.onFrame(outBuffer, info.presentationTimeUs);
+                                mOutputCallback.onFrame(outBuffer, info.offset, info.size, info.presentationTimeUs);
                             }
                         }
                         codec.releaseOutputBuffer(index, false);
@@ -228,16 +244,16 @@ public class SurfaceRecorder {
         }
 
         @Override
-        public void onConfig(ByteBuffer buffer) {
+        public void onConfig(ByteBuffer sps, ByteBuffer pps) {
             if (mDelegate != null) {
-                mDelegate.onConfig(buffer);
+                mDelegate.onConfig(sps, pps);
             }
         }
 
         @Override
-        public void onFrame(ByteBuffer buffer, long pts) {
+        public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
             if (mDelegate != null) {
-                mDelegate.onFrame(buffer, pts);
+                mDelegate.onFrame(buffer, offset, size, pts);
             }
         }
 
@@ -273,15 +289,19 @@ public class SurfaceRecorder {
         }
 
         @Override
-        public void onConfig(ByteBuffer buffer) {
+        public void onConfig(ByteBuffer sps, ByteBuffer pps) {
             try {
-                mDataSize = buffer.remaining();
+                mDataSize = sps.remaining() + pps.remaining();
                 if (mData == null || mData.length < mDataSize) {
                     mData = new byte[mDataSize];
                 }
-                buffer.mark();
-                buffer.get(mData, 0, mDataSize);
-                buffer.reset();
+                sps.mark();
+                sps.get(mData, 0, sps.remaining());
+                sps.reset();
+
+                pps.mark();
+                pps.get(mData, sps.remaining(), pps.remaining());
+                pps.reset();
 
                 if (mDataStream != null) {
                     mDataStream.writeInt(mDataSize);
@@ -293,11 +313,11 @@ public class SurfaceRecorder {
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
-            super.onConfig(buffer);
+            super.onConfig(sps, pps);
         }
 
         @Override
-        public void onFrame(ByteBuffer buffer, long pts) {
+        public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
             try {
                 mDataSize = buffer.remaining();
                 if (mData == null || mData.length < mDataSize) {
@@ -317,7 +337,7 @@ public class SurfaceRecorder {
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
-            super.onFrame(buffer, pts);
+            super.onFrame(buffer, offset, size, pts);
         }
 
         @Override
@@ -334,16 +354,6 @@ public class SurfaceRecorder {
             }
             super.onEnd();
         }
-    }
-
-    private String dumpByteBuffer(ByteBuffer buffer, int offset, int size) {
-        StringBuffer hexString = new StringBuffer();
-        int limit = offset + size;
-        for (int i = offset; i < limit; i++) {
-            hexString.append(String.format(Locale.US, "%02x ", buffer.get(i)));
-        }
-        buffer.rewind();
-        return hexString.toString().trim();
     }
 
     private int align(int value, int alignment) {
