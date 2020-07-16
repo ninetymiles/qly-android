@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -17,6 +18,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -225,6 +227,13 @@ public class MainFragment extends Fragment {
             sLogger.trace("");
             mPendingStart = true;
             if (mAppService != null) {
+                final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                if (prefs.getBoolean(getString(R.string.prefs_rtmp_key), false)) {
+                    mAppService.setRtmpEnable(true);
+                    mAppService.setRtmpServerAddress(prefs.getString(getString(R.string.prefs_rtmp_server_key), BuildConfig.DEFAULT_RTMP_SERVER_ADDRESS));
+                } else {
+                    mAppService.setRtmpEnable(false);
+                }
                 mAppService.doStartServer();
                 mPendingStart = false;
             }

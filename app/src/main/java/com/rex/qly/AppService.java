@@ -30,6 +30,8 @@ import android.view.Surface;
 import androidx.annotation.Keep;
 
 import com.rex.qly.preference.Prefs;
+import com.rex.qly.record.OutputCallbackRtmp;
+import com.rex.qly.record.SurfaceRecorder;
 import com.rex.qly.utils.AssetsHelper;
 
 import org.json.JSONException;
@@ -89,6 +91,11 @@ public class AppService extends Service {
     private VirtualDisplay mDisplay;
     private ImageReader mImageReader;
     private Surface mSurface;
+
+    private boolean mRtmpEnabled;
+    private String mRtmpServerAddress;
+    private Rtmp mRtmp;
+    private SurfaceRecorder mSurfaceRecorder;
 
     private SimpleWebServer mHttpServer;
     private WsServer mWsServer;
@@ -159,7 +166,7 @@ public class AppService extends Service {
 
         mNotifier.onCreate(this);
 
-        Rtmp rtmp = new Rtmp();
+        mRtmp = new Rtmp();
     }
 
     @Override
@@ -275,19 +282,29 @@ public class AppService extends Service {
         startService(new Intent(this, AppService.class));
         mNotifier.onServerStart();
 
-        try {
-            mHttpServer.start();
-        } catch (IOException ex) {
-            sLogger.warn("Failed to start http server\n", ex);
-        }
-
-        try {
-            mWsServer.start(60000);
-        } catch (IOException ex) {
-            sLogger.warn("Failed to start ws server\n", ex);
+        if (! mRtmpEnabled) {
+            try {
+                mHttpServer.start();
+            } catch (IOException ex) {
+                sLogger.warn("Failed to start http server\n", ex);
+            }
+            try {
+                mWsServer.start(60000);
+            } catch (IOException ex) {
+                sLogger.warn("Failed to start ws server\n", ex);
+            }
         }
 
         setServerState(State.STARTED);
+
+        if (mRtmpEnabled) {
+            if (mProjectionResultCode == null && mProjectionResultData == null) {
+                requestMediaProjection();
+            } else {
+                doStartSession(mProjectionResultCode, mProjectionResultData);
+            }
+        }
+
         sLogger.trace("-");
         return true;
     }
@@ -319,6 +336,14 @@ public class AppService extends Service {
             sLogger.trace("- server not started");
             return false;
         }
+        if (mProjection == null) {
+            sLogger.trace("- projection not ready");
+            return false;
+        }
+        if (mDisplay != null) {
+            sLogger.trace("- session in busy");
+            return false;
+        }
 
         if (mWakeLock == null) {
             sLogger.info("Acquire power lock");
@@ -326,19 +351,34 @@ public class AppService extends Service {
             mWakeLock.acquire();
         }
 
-        Point displaySize = getDefaultDisplaySize();
-        Point preferSize = new Prefs(this).getVideoResolutionPoint();
-        Point captureSize = scaleSize(displaySize.x, displaySize.y, preferSize.x, preferSize.y);
+        final Point displaySize = getDefaultDisplaySize();
+        final Point preferSize = new Prefs(this).getVideoResolutionPoint();
+        final Point captureSize = scaleSize(displaySize.x, displaySize.y, preferSize.x, preferSize.y);
         sLogger.debug("Display:{}x{} Prefer:{}x{} Capture:{}x{}",
                 displaySize.x, displaySize.y,
                 preferSize.x, preferSize.y,
                 captureSize.x, captureSize.y);
 
-        mImageReader = ImageReader.newInstance(captureSize.x, captureSize.y, PixelFormat.RGBA_8888, MAX_NUM_IMAGES);
-        mImageReader.setOnImageAvailableListener(mImageSendListener, mHandler);
-        mSurface = mImageReader.getSurface();
-
-        if (mProjection != null) {
+        if (mRtmpEnabled) {
+            mSurfaceRecorder = new SurfaceRecorder();
+            mSurfaceRecorder.setOutputCallback(new OutputCallbackRtmp(mRtmpServerAddress));
+            mSurfaceRecorder.setSurfaceCallback(new SurfaceRecorder.SurfaceCallback() {
+                @Override
+                public void onSurface(Surface surface) {
+                    //mSurface = surface; // SurfaceRecorder.stop() will auto release the surface, do not need keep a reference for handleSessionStopCommand()
+                    mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
+                            captureSize.x, captureSize.y, 213, // TV-DPI
+                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                            surface,
+                            mVirtualDisplayCallback,
+                            mHandler);
+                }
+            });
+            mSurfaceRecorder.start(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y));
+        } else {
+            mImageReader = ImageReader.newInstance(captureSize.x, captureSize.y, PixelFormat.RGBA_8888, MAX_NUM_IMAGES);
+            mImageReader.setOnImageAvailableListener(mImageSendListener, mHandler);
+            mSurface = mImageReader.getSurface();
             if (mDisplay == null) {
                 mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
                         captureSize.x, captureSize.y, 213, // TV-DPI
@@ -365,6 +405,10 @@ public class AppService extends Service {
             mWakeLock = null;
         }
 
+        if (mSurfaceRecorder != null) {
+            mSurfaceRecorder.stop();
+            mSurfaceRecorder = null;
+        }
         if (mDisplay != null) {
             mDisplay.setSurface(null);
             mDisplay.release();
@@ -417,10 +461,7 @@ public class AppService extends Service {
         if (mDisplay == null) {
             return false; // Session not started, do nothing
         }
-
         mDisplay.setSurface(null);
-        mSurface.release();
-        //mImageReader.close(); // FIXME: Close here will got "dequeueBuffer: BufferQueue has been abandoned"
 
         Point displaySize = getDefaultDisplaySize();
         Point preferSize = new Prefs(this).getVideoResolutionPoint();
@@ -430,11 +471,26 @@ public class AppService extends Service {
                 preferSize.x, preferSize.y,
                 captureSize.x, captureSize.y);
 
-        mImageReader = ImageReader.newInstance(captureSize.x, captureSize.y, PixelFormat.RGBA_8888, MAX_NUM_IMAGES);
-        mImageReader.setOnImageAvailableListener(mImageSendListener, mHandler);
+        if (mRtmpEnabled) {
+            mSurfaceRecorder.stop();
+            mSurfaceRecorder.start(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y));
+        } else {
+            mSurface.release();
+            //mImageReader.close(); // FIXME: Close here will got "dequeueBuffer: BufferQueue has been abandoned"
+            mImageReader = ImageReader.newInstance(captureSize.x, captureSize.y, PixelFormat.RGBA_8888, MAX_NUM_IMAGES);
+            mImageReader.setOnImageAvailableListener(mImageSendListener, mHandler);
+        }
         mDisplay.resize(captureSize.x, captureSize.y, 213);
         mDisplay.setSurface(mImageReader.getSurface());
         return true;
+    }
+
+    public void setRtmpEnable(boolean enabled) {
+        mRtmpEnabled = enabled;
+    }
+
+    public void setRtmpServerAddress(String address) {
+        mRtmpServerAddress = address;
     }
 
     public void doStartServer() {
@@ -492,6 +548,16 @@ public class AppService extends Service {
             }
         }
         return new Point(width, height);
+    }
+
+    private int bitRate(int width, int height) {
+        int bitRate = 4 * 1000000; // 4M
+        if (height > 720) {
+            bitRate = 10 * 1000000; // 10M
+        } else if (height > 1088) {
+            bitRate = 50 * 1000000; // 50M
+        }
+        return bitRate;
     }
 
     // Notification will send intent to close the server
