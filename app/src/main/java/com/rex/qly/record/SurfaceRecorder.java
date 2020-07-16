@@ -127,7 +127,7 @@ public class SurfaceRecorder {
                 @Override
                 public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index, @NonNull MediaCodec.BufferInfo info) {
                     mLogger.trace("index:{} flags:{} offset:{} size:{} presentationTimeUs:{}", index, info.flags, info.offset, info.size, info.presentationTimeUs);
-                    ByteBuffer outBuffer = codec.getOutputBuffer(index);
+                    ByteBuffer outBuffer = codec.getOutputBuffer(index); // DirectByteBuffer
                     if (outBuffer != null) {
                         outBuffer.position(info.offset);
                         outBuffer.limit(info.offset + info.size);
@@ -145,21 +145,9 @@ public class SurfaceRecorder {
                             //    mOutputCallback.onConfig(outBuffer, info.offset, info.size);
                             //}
                         } else {
-                            if ((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) > 0) {
-                                MediaFormat format = codec.getOutputFormat(index);
-                                ByteBuffer spsBuffer = format.getByteBuffer("csd-0");
-                                ByteBuffer ppsBuffer = format.getByteBuffer("csd-1");
-                                mLogger.debug("SPS:<{}>", Debug.dumpByteBuffer(spsBuffer, 0, spsBuffer.remaining()));
-                                mLogger.debug("PPS:<{}>", Debug.dumpByteBuffer(ppsBuffer, 0, ppsBuffer.remaining()));
-                                if (mOutputCallback != null) {
-                                    mOutputCallback.onConfig(spsBuffer, ppsBuffer);
-                                }
-                                // FIXME: Some device may auto include SPS and PPS in IDR frame, need remove it manually
-                                mLogger.info("Got KEY_FRAME - {}", outBuffer.remaining());
-                            } else {
-                                mLogger.info("Got FRAME - {}", outBuffer.remaining());
-                            }
+                            // FIXME: Some device may auto include SPS and PPS in IDR frame, need remove it manually
                             // FIXME: Convert Annex-B to Avcc, avoid mixing with SEI frame still contain csd
+                            mLogger.info("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
                             mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
                             if (mOutputCallback != null) {
                                 mOutputCallback.onFrame(outBuffer, info.offset, info.size, info.presentationTimeUs);
@@ -189,6 +177,14 @@ public class SurfaceRecorder {
                     mLogger.debug("Codec output size {}x{}", width, height);
                     if (mOutputCallback != null) {
                         mOutputCallback.onFormat(width, height);
+                    }
+
+                    ByteBuffer spsBuffer = format.getByteBuffer("csd-0"); // HeapByteBuffer
+                    ByteBuffer ppsBuffer = format.getByteBuffer("csd-1"); // HeapByteBuffer
+                    mLogger.debug("SPS:<{}>", Debug.dumpByteBuffer(spsBuffer, 0, spsBuffer.remaining()));
+                    mLogger.debug("PPS:<{}>", Debug.dumpByteBuffer(ppsBuffer, 0, ppsBuffer.remaining()));
+                    if (mOutputCallback != null) {
+                        mOutputCallback.onConfig(spsBuffer, ppsBuffer);
                     }
                 }
             });
