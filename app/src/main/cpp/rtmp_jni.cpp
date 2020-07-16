@@ -7,9 +7,13 @@
 
 #include <jni.h>
 #include <rtmp.h>
+#include <log.h>
 
 #include "debug.h"
 #include "logging.h"
+
+
+void __cb_rtmp_log(int level, const char * fmt, va_list ap);
 
 extern "C"
 JNIEXPORT jstring JNICALL
@@ -31,6 +35,9 @@ Java_com_rex_qly_Rtmp_nativeOpen(JNIEnv* env, jclass clazz, jstring jurl)
 {
     const char * url = env->GetStringUTFChars(jurl, nullptr);
     LOGV("nativeOpen+ url:<%s>", url);
+
+    RTMP_LogSetCallback(__cb_rtmp_log);
+    RTMP_LogSetLevel(RTMP_LOGALL);
 
     RTMP * rtmp = RTMP_Alloc();
     RTMP_Init(rtmp);
@@ -205,6 +212,20 @@ Java_com_rex_qly_Rtmp_nativeClose(JNIEnv * env, jclass clazz, jlong ptr)
     LOGV("nativeRelease rtmp:%p", rtmp);
     RTMP_Close(rtmp);
     RTMP_Free(rtmp);
+}
+
+void
+__cb_rtmp_log(int level, const char * fmt, va_list ap)
+{
+    switch (level) {
+    case RTMP_LOGALL:
+    case RTMP_LOGDEBUG2:    LOG_VPRINT(LOG_LEVEL_VERBOSE, fmt, ap); break;
+    case RTMP_LOGDEBUG:     LOG_VPRINT(LOG_LEVEL_DEBUG, fmt, ap);   break;
+    case RTMP_LOGINFO:      LOG_VPRINT(LOG_LEVEL_INFO, fmt, ap);    break;
+    case RTMP_LOGWARNING:   LOG_VPRINT(LOG_LEVEL_WARN, fmt, ap);    break;
+    case RTMP_LOGERROR:     LOG_VPRINT(LOG_LEVEL_ERROR, fmt, ap);   break;
+    default:                LOG_VPRINT(LOG_LEVEL_ERROR, fmt, ap);   break; // never reached
+    }
 }
 
 // vim:ts=4:sw=4:et:
