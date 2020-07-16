@@ -7,6 +7,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.CheckBoxPreference;
+import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -48,6 +50,9 @@ public class FragmentSetting extends PreferenceFragmentCompat {
         });
 
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+
+        EditTextPreference textPrefs = (EditTextPreference) getPreferenceScreen().findPreference(getString(R.string.prefs_rtmp_server_key));
+        textPrefs.setSummary(prefs.getString(getString(R.string.prefs_rtmp_server_key), BuildConfig.DEFAULT_RTMP_SERVER_ADDRESS));
 
         // For version info item
         Preference prefsVersion = getPreferenceScreen().findPreference(getString(R.string.prefs_version_key));

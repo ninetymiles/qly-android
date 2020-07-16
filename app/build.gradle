@@ -16,6 +16,8 @@ android {
         versionName project.version
         versionCode Integer.parseInt(([ 'git','rev-list','--count','HEAD'].execute().text).trim())
 
+        buildConfigField 'String',  'DEFAULT_RTMP_SERVER_ADDRESS', '"rtmp://localhost:1935/live/1"'
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         multiDexEnabled true

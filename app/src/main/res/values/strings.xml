@@ -51,6 +51,14 @@
     <string name="prefs_video_resolution_title">"Video resolution"</string>
     <string name="prefs_video_resolution_summary" translatable="false">"%1$s"</string>
 
+    <string name="prefs_rtmp_key" translatable="false">KEY_RTMP_ENABLE</string>
+    <string name="prefs_rtmp_title">"Enable RTMP upstream"</string>
+    <string name="prefs_rtmp_summary">"Encode H264 video and upload to nginx stream server."</string>
+
+    <string name="prefs_rtmp_server_key" translatable="false">KEY_RTMP_SERVER</string>
+    <string name="prefs_rtmp_server_title">"RTMP server url"</string>
+    <string name="prefs_rtmp_server_summary" translatable="false">"%1$s"</string>
+
     <string name="prefs_unique_id_key" translatable="false">KEY_UNIQUE_ID</string>
 
     <!-- About -->

@@ -103,7 +103,7 @@ public class SurfaceRecorder {
         MediaFormat fmt = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         fmt.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         fmt.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);
-        fmt.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 60);
+        fmt.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2);
         fmt.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             fmt.setInteger(MediaFormat.KEY_PROFILE, codecProfile);

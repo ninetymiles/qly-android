@@ -13,6 +13,20 @@
             android:summary="@string/prefs_video_resolution_summary"
             android:title="@string/prefs_video_resolution_title" />
 
+        <CheckBoxPreference
+            android:key="@string/prefs_rtmp_key"
+            android:summary="@string/prefs_rtmp_summary"
+            android:title="@string/prefs_rtmp_title" />
+
+        <EditTextPreference
+            android:defaultValue="rtmp://localhost:1935/live/1"
+            android:dependency="@string/prefs_rtmp_key"
+            android:key="@string/prefs_rtmp_server_key"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:summary="@string/prefs_rtmp_server_summary"
+            android:title="@string/prefs_rtmp_server_title" />
+
     </PreferenceCategory>
 
     <PreferenceCategory
