@@ -27,11 +27,19 @@ public class OutputCallbackRtmp implements SurfaceRecorder.OutputCallback {
     @Override
     public void onConfig(ByteBuffer sps, ByteBuffer pps) {
         mLogger.trace("sps:{} pps:{}", sps.remaining(), pps.remaining());
+        if (!sps.isDirect()) {
+            sps = ByteBuffer.allocateDirect(sps.remaining()).put(sps);
+        }
+        if (!pps.isDirect()) {
+            pps = ByteBuffer.allocateDirect(pps.remaining()).put(pps);
+        }
+        mRtmp.sendVideoConfig(sps, pps);
     }
 
     @Override
     public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
         mLogger.trace("offset:{} size:{} pts:{}", offset, size, pts);
+        mRtmp.sendVideoFrame(buffer, offset, size, pts);
     }
 
     @Override
