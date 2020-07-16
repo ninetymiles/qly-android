@@ -94,7 +94,6 @@ public class AppService extends Service {
 
     private boolean mRtmpEnabled;
     private String mRtmpServerAddress;
-    private Rtmp mRtmp;
     private SurfaceRecorder mSurfaceRecorder;
 
     private SimpleWebServer mHttpServer;
@@ -165,8 +164,6 @@ public class AppService extends Service {
         mWsServer = new WsServer(5566, mWsServerCallback);
 
         mNotifier.onCreate(this);
-
-        mRtmp = new Rtmp();
     }
 
     @Override
