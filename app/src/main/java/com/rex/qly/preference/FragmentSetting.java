@@ -53,6 +53,14 @@ public class FragmentSetting extends PreferenceFragmentCompat {
 
         EditTextPreference textPrefs = (EditTextPreference) getPreferenceScreen().findPreference(getString(R.string.prefs_rtmp_server_key));
         textPrefs.setSummary(prefs.getString(getString(R.string.prefs_rtmp_server_key), BuildConfig.DEFAULT_RTMP_SERVER_ADDRESS));
+        textPrefs.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference preference, Object newValue) {
+                mLogger.trace("key:{} newValue:{}", preference.getKey(), newValue);
+                preference.setSummary((String) newValue);
+                return true;
+            }
+        });
 
         // For version info item
         Preference prefsVersion = getPreferenceScreen().findPreference(getString(R.string.prefs_version_key));
