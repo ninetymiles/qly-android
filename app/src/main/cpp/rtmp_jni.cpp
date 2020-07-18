@@ -37,8 +37,9 @@ Java_com_rex_qly_Rtmp_nativeOpen(JNIEnv* env, jclass clazz, jstring jurl)
     LOGV("nativeOpen+ url:<%s>", url);
 
     RTMP_LogSetCallback(__cb_rtmp_log);
+    RTMP_LogSetLevel(RTMP_LOGINFO);
     //RTMP_LogSetLevel(RTMP_LOGDEBUG);
-    //RTMP_LogSetLevel(RTMP_LOGALL);
+    //RTMP_LogSetLevel(RTMP_LOGDEBUG2); // Will dump packet in hex
 
     RTMP * rtmp = RTMP_Alloc();
     RTMP_Init(rtmp);
@@ -135,6 +136,9 @@ Java_com_rex_qly_Rtmp_nativeSendVideoConfig(JNIEnv * env, jclass clazz,
     packet.m_hasAbsTimestamp = 0;
     packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
     packet.m_nInfoField2 = rtmp->m_stream_id;
+#if (LOG_LEVEL <= LOG_LEVEL_VERBOSE)
+    RTMPPacket_Dump(&packet);
+#endif
 
     int result = 0;
     if (RTMP_IsConnected(rtmp)) {
@@ -152,7 +156,6 @@ Java_com_rex_qly_Rtmp_nativeSendVideoData(JNIEnv * env, jclass clazz,
 {
     RTMP * rtmp = reinterpret_cast<RTMP*>(ptr);
     uint8_t * data = (uint8_t *) env->GetDirectBufferAddress(jdata);
-    int total = size;
     LOGV("nativeSendVideoData+ rtmp:%p data:%p offset:%d size:%d pts:%" PRId64, rtmp, data, offset, size, pts);
 
     bool keyframe = false;
@@ -189,13 +192,16 @@ Java_com_rex_qly_Rtmp_nativeSendVideoData(JNIEnv * env, jclass clazz,
     memcpy(&body[i], data + offset, (size_t) size);
     i += size;
 
-    packet.m_hasAbsTimestamp = 0;
     packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
     packet.m_nInfoField2 = rtmp->m_stream_id;
     packet.m_nChannel = 0x04;
     packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
+    packet.m_hasAbsTimestamp = 0;
     packet.m_nTimeStamp = (uint32_t) pts;
     packet.m_nBodySize = i;
+#if (LOG_LEVEL <= LOG_LEVEL_VERBOSE)
+    RTMPPacket_Dump(&packet);
+#endif
 
     if (RTMP_IsConnected(rtmp)) {
         if (!RTMP_SendPacket(rtmp, &packet, true)) {
@@ -206,8 +212,8 @@ Java_com_rex_qly_Rtmp_nativeSendVideoData(JNIEnv * env, jclass clazz,
     }
 
     RTMPPacket_Free(&packet);
-    LOGV("nativeSendVideoData- size:%d total:%d", size, total);
-    return (size == 0) ? total : 0;
+    LOGV("nativeSendVideoData- size:%d", size);
+    return size;
 }
 
 extern "C"

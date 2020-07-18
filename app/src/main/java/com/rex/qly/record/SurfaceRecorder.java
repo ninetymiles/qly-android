@@ -11,8 +11,6 @@ import android.view.Surface;
 
 import androidx.annotation.NonNull;
 
-import com.rex.qly.utils.Debug;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +32,7 @@ public class SurfaceRecorder {
     private Surface mInputSurface;
     private SurfaceCallback mSurfaceCallback;
     private OutputCallback mOutputCallback;
+    private long mStartTime;
 
     public interface SurfaceCallback {
         void onSurface(Surface surface);
@@ -59,6 +58,7 @@ public class SurfaceRecorder {
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public synchronized SurfaceRecorder start(int width, int height, int frameRate, int bitRate) {
         mLogger.trace("+ width:{} height:{} frameRate:{} bitRate:{}", width, height, frameRate, bitRate);
+        mStartTime = 0;
 
         try {
             mCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
@@ -127,6 +127,9 @@ public class SurfaceRecorder {
                 @Override
                 public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index, @NonNull MediaCodec.BufferInfo info) {
                     mLogger.trace("index:{} flags:{} offset:{} size:{} presentationTimeUs:{}", index, info.flags, info.offset, info.size, info.presentationTimeUs);
+                    if (mStartTime == 0) {
+                        mStartTime = info.presentationTimeUs;
+                    }
                     ByteBuffer outBuffer = codec.getOutputBuffer(index); // DirectByteBuffer
                     if (outBuffer != null) {
                         outBuffer.position(info.offset);
@@ -149,8 +152,10 @@ public class SurfaceRecorder {
                             // FIXME: Convert Annex-B to Avcc, avoid mixing with SEI frame still contain csd
                             mLogger.info("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
                             //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
+
+                            long timeOffset = (info.presentationTimeUs - mStartTime) / 1000; // Convert microseconds(10^-6) to milliseconds(10^-3)
                             if (mOutputCallback != null) {
-                                mOutputCallback.onFrame(outBuffer, info.offset, info.size, info.presentationTimeUs);
+                                mOutputCallback.onFrame(outBuffer, info.offset, info.size, timeOffset);
                             }
                         }
                         codec.releaseOutputBuffer(index, false);
