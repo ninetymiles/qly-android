@@ -138,7 +138,7 @@ public class SurfaceRecorder {
                             }
                         } else if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) > 0) { // pts may be zero
                             mLogger.info("Got CODEC_CONFIG - {}", outBuffer.remaining());
-                            mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, info.size));
+                            //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, info.size));
                             // Nexus9 may provide valid PTS, Pixel may provide zero PTS
                             // e.g. 00 00 00 01 67 42 C0 20 E9 01 78 13 BC B2 C0 3C 22 11 A8 00 00 00 01 68 CE 06 E2
                             //if (mOutputCallback != null) {
@@ -148,7 +148,7 @@ public class SurfaceRecorder {
                             // FIXME: Some device may auto include SPS and PPS in IDR frame, need remove it manually
                             // FIXME: Convert Annex-B to Avcc, avoid mixing with SEI frame still contain csd
                             mLogger.info("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
-                            mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
+                            //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
                             if (mOutputCallback != null) {
                                 mOutputCallback.onFrame(outBuffer, info.offset, info.size, info.presentationTimeUs);
                             }
@@ -181,8 +181,8 @@ public class SurfaceRecorder {
 
                     ByteBuffer spsBuffer = format.getByteBuffer("csd-0"); // HeapByteBuffer
                     ByteBuffer ppsBuffer = format.getByteBuffer("csd-1"); // HeapByteBuffer
-                    mLogger.debug("SPS:<{}>", Debug.dumpByteBuffer(spsBuffer, 0, spsBuffer.remaining()));
-                    mLogger.debug("PPS:<{}>", Debug.dumpByteBuffer(ppsBuffer, 0, ppsBuffer.remaining()));
+                    //mLogger.debug("SPS:<{}>", Debug.dumpByteBuffer(spsBuffer, 0, spsBuffer.remaining()));
+                    //mLogger.debug("PPS:<{}>", Debug.dumpByteBuffer(ppsBuffer, 0, ppsBuffer.remaining()));
                     if (mOutputCallback != null) {
                         mOutputCallback.onConfig(spsBuffer, ppsBuffer);
                     }
