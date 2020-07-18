@@ -10,3 +10,4 @@ endif ()
 
 add_subdirectory(src/main/cpp)
 add_subdirectory(cmake/external/librtmp)
+add_subdirectory(cmake/external/gtest)
