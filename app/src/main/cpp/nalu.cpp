@@ -5,13 +5,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "logging.h"
-
 #include "debug.h"
+#include "logging.h"
+#include "nalu.h"
 
 #define CMP_EQUAL   0
-
-static const char CSD[] = { 0x00, 0x00, 0x00, 0x01 };
 
 size_t
 nal_parse(const uint8_t * data, size_t data_size)
@@ -33,7 +31,7 @@ nal_type(const uint8_t * data, size_t data_size)
 {
     int pos_cur = ::memcmp(data, CSD, sizeof(CSD));
     if (pos_cur == CMP_EQUAL && data_size > sizeof(CSD)) {
-        return data[sizeof(CSD)] & 0x1F;
+        return (data[sizeof(CSD)] & 0x1F);
     }
     return 0;
 }
