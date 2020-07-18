@@ -20,13 +20,20 @@ TEST(nalu_test, nal_parse)
             0x00, 0x00, 0x00, 0x01, 0x68, 0xce, 0x3c, 0x80,
     };
     size_t data_size = sizeof(data);
+    size_t offset = 0;
 
-    size_t len = nal_parse(data, data_size);
+    size_t len = nal_parse(data + offset, data_size);
     EXPECT_EQ(14, len);
 
+    offset += len;
     data_size -= len;
-    len = nal_parse(data + len, data_size);
+    len = nal_parse(data + offset, data_size);
     EXPECT_EQ(8, len);
+
+    offset += len;
+    data_size -= len;
+    len = nal_parse(data + offset, data_size);
+    EXPECT_EQ(0, len);
 }
 
 TEST(nalu_test, nal_parse_invalid)
