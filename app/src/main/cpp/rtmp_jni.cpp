@@ -96,7 +96,7 @@ Java_com_rex_qly_Rtmp_nativeSendVideoConfig(JNIEnv * env, jclass clazz,
     }
 
     RTMPPacket packet = { 0 };
-    RTMPPacket_Alloc(&packet, (int) (sps_size + pps_size));
+    RTMPPacket_Alloc(&packet, (int) (sps_size + pps_size + 16));
 
     uint32_t i = 0;
     uint8_t * body = (uint8_t *) packet.m_body;
@@ -108,21 +108,21 @@ Java_com_rex_qly_Rtmp_nativeSendVideoConfig(JNIEnv * env, jclass clazz,
     body[i++] = 0x00;
 
     // AVCDecoderConfigurationRecord
-    body[i++] = 0x01;
-    body[i++] = sps[1];
-    body[i++] = sps[2];
-    body[i++] = sps[3];
-    body[i++] = 0xff;
+    body[i++] = 0x01;   // configuration version
+    body[i++] = sps[1]; // profile
+    body[i++] = sps[2]; // profile compatibility
+    body[i++] = sps[3]; // level
+    body[i++] = 0xff;   // reserved
 
     // SPS
-    body[i++] = 0xe1;
+    body[i++] = 0xe1;   // reserved
     body[i++] = (uint8_t) ((sps_size >> 8) & 0xff);
     body[i++] = (uint8_t) ((sps_size)      & 0xff);
     memcpy(&body[i], sps, (size_t) sps_size);
     i += sps_size;
 
     // PPS
-    body[i++] = 0x01;
+    body[i++] = 0x01;   // pps number
     body[i++] = (uint8_t) ((pps_size >> 8) & 0xff);
     body[i++] = (uint8_t) ((pps_size)      & 0xff);
     memcpy(&body[i], pps, (size_t) pps_size);
@@ -133,13 +133,14 @@ Java_com_rex_qly_Rtmp_nativeSendVideoConfig(JNIEnv * env, jclass clazz,
     packet.m_nChannel = 0x04;
     packet.m_nTimeStamp = 0;
     packet.m_hasAbsTimestamp = 0;
-    packet.m_headerType = RTMP_PACKET_SIZE_MEDIUM;
+    packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
     packet.m_nInfoField2 = rtmp->m_stream_id;
 
     int result = 0;
     if (RTMP_IsConnected(rtmp)) {
         result = RTMP_SendPacket(rtmp, &packet, true);
     }
+    RTMPPacket_Free(&packet);
     LOGV("nativeSendVideoConfig- result:%d", result);
     return result;
 }
@@ -154,53 +155,57 @@ Java_com_rex_qly_Rtmp_nativeSendVideoData(JNIEnv * env, jclass clazz,
     int total = size;
     LOGV("nativeSendVideoData+ rtmp:%p data:%p offset:%d size:%d pts:%" PRId64, rtmp, data, offset, size, pts);
 
-    while (true) {
-        size_t len = nal_parse(data + offset, (size_t) size);
+    bool keyframe = false;
+    size_t pos   = (size_t) offset;
+    size_t limit = (size_t) size;
+    while (limit) {
+        size_t len = nal_parse(data + pos, limit);
         if (len == 0) break;
 
-        int type = nal_type(data + offset, len);
+        int type = nal_type(data + pos, len);
         LOGV("nativeSendVideoData type:%d(%s) len:%zu", type, nal_type_str(type), len);
-        dump_buffer(data + offset, std::min(len, (size_t) 64), nal_type_str(type));
-
-        offset += sizeof(CSD);
-        len    -= sizeof(CSD);
-        LOGV("offset:%d len:%zu", offset, len);
-        {
-            RTMPPacket packet = { 0 };
-            RTMPPacket_Alloc(&packet, (int) len + 9);
-
-            uint32_t i = 0;
-            uint8_t * body = (uint8_t *) packet.m_body;
-            body[i++] = (uint8_t) ((type == H264_NAL_IDR_SLICE) ? 0x17 : 0x27);
-            body[i++] = 0x01;
-            body[i++] = 0x00;
-            body[i++] = 0x00;
-            body[i++] = 0x00;
-
-            body[i++] = (uint8_t) ((len >> 24) & 0xff);
-            body[i++] = (uint8_t) ((len >> 16) & 0xff);
-            body[i++] = (uint8_t) ((len >>  8) & 0xff);
-            body[i++] = (uint8_t) ((len)       & 0xff);
-
-            LOGV("i:%d", i);
-            memcpy(&body[i], data + offset, (size_t) len);
-
-            packet.m_hasAbsTimestamp = 0;
-            packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
-            packet.m_nInfoField2 = rtmp->m_stream_id;
-            packet.m_nChannel = 0x04;
-            packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
-            packet.m_nTimeStamp = (uint32_t) pts;
-            packet.m_nBodySize = (uint32_t) len + i;
-            LOGV("bodySize:%zu", len + i);
-
-            if (!RTMP_IsConnected(rtmp)) break;
-            if (!RTMP_SendPacket(rtmp, &packet, true)) break;
+        if (type == H264_NAL_IDR_SLICE) {
+            keyframe = true;
         }
-        offset += len;
-        size   -= len;
+
+        data[pos]     = (uint8_t) (((len - sizeof(CSD)) >> 24) & 0xff);
+        data[pos + 1] = (uint8_t) (((len - sizeof(CSD)) >> 16) & 0xff);
+        data[pos + 2] = (uint8_t) (((len - sizeof(CSD)) >>  8) & 0xff);
+        data[pos + 3] = (uint8_t) (( len - sizeof(CSD))       & 0xff);
+
+        pos   += len;
+        limit -= len;
+    }
+    RTMPPacket packet = { 0 };
+    RTMPPacket_Alloc(&packet, (int) size + 5);
+
+    uint32_t i = 0;
+    uint8_t * body = (uint8_t *) packet.m_body;
+    body[i++] = (uint8_t) (keyframe ? 0x17 : 0x27);
+    body[i++] = 0x01;
+    body[i++] = 0x00;
+    body[i++] = 0x00;
+    body[i++] = 0x00;
+    memcpy(&body[i], data + offset, (size_t) size);
+    i += size;
+
+    packet.m_hasAbsTimestamp = 0;
+    packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
+    packet.m_nInfoField2 = rtmp->m_stream_id;
+    packet.m_nChannel = 0x04;
+    packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
+    packet.m_nTimeStamp = (uint32_t) pts;
+    packet.m_nBodySize = i;
+
+    if (RTMP_IsConnected(rtmp)) {
+        if (!RTMP_SendPacket(rtmp, &packet, true)) {
+            LOGW("Failed to send packet");
+        }
+    } else {
+        LOGW("RTMP not connected");
     }
 
+    RTMPPacket_Free(&packet);
     LOGV("nativeSendVideoData- size:%d total:%d", size, total);
     return (size == 0) ? total : 0;
 }
