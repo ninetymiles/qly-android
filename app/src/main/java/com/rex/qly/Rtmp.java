@@ -41,12 +41,12 @@ public class Rtmp implements Closeable {
 
     public boolean sendVideoConfig(ByteBuffer sps, ByteBuffer pps) {
         mLogger.trace("this:{} sps:{} pps:{}", hashCode(), sps.remaining(), pps.remaining());
-        return (nativeSendVideoConfig(mNativePtr, sps, pps) > 0);
+        return (mNativePtr != 0 && nativeSendVideoConfig(mNativePtr, sps, pps) > 0);
     }
 
     public boolean sendVideoFrame(ByteBuffer data, int offset, int size, long pts) {
         mLogger.trace("this:{} offset:{} size:{} pts:{}", hashCode(), offset, size, pts);
-        return (nativeSendVideoData(mNativePtr, data, offset, size, pts) > 0);
+        return (mNativePtr != 0 && nativeSendVideoData(mNativePtr, data, offset, size, pts) > 0);
     }
 
     private static native String nativeVersion();
