@@ -16,7 +16,6 @@ import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Binder;
-import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -124,11 +123,10 @@ public class AppService extends Service {
         @Override
         public MediaProjectionRequester createRequester() {
             sLogger.trace("");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API-29
-                return new MediaProjectionRequestActivity.MediaProjectionRequester29();
-            } else {
-                return new MediaProjectionRequestActivity.MediaProjectionRequester21();
-            }
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { // API-29
+//                return new MediaProjectionRequestActivity.MediaProjectionRequester29();
+//            }
+            return new MediaProjectionRequestActivity.MediaProjectionRequester21();
         }
     };
     public void setProjectionRequesterFactory(MediaProjectionRequesterFactory factory) {
