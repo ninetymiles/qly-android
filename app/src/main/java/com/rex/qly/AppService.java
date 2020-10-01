@@ -57,7 +57,9 @@ public class AppService extends Service {
 
     private static final int MAX_NUM_IMAGES = 3;
 
-    private static final String ACTION_CLOSE            = "com.rex.qly.ACTION_CLOSE";
+    private static final String ACTION_SERVER_START     = "com.rex.qly.ACTION_SERVER_START";
+    private static final String ACTION_SERVER_STOP      = "com.rex.qly.ACTION_SERVER_STOP";
+    private static final String ACTION_SESSION_STOP     = "com.rex.qly.ACTION_SESSION_STOP";
     private static final String ACTION_PROJECTION       = "com.rex.qly.ACTION_PROJECTION";
     private static final String KEY_RESULT_CODE         = "com.rex.qly.RESULT_CODE";
     private static final String KEY_RESULT_DATA         = "com.rex.qly.RESULT_DATA";
@@ -167,14 +169,16 @@ public class AppService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
-            if (Intent.ACTION_RUN.equals(intent.getAction())) {
+            if (ACTION_SERVER_START.equals(intent.getAction())) {
                 mHandler.sendEmptyMessage(MSG_SERVER_START);
-            } else if (ACTION_CLOSE.equals(intent.getAction())) {
+            } else if (ACTION_SERVER_STOP.equals(intent.getAction())) {
                 mHandler.sendEmptyMessage(MSG_SERVER_STOP);
+            } else if (ACTION_SESSION_STOP.equals(intent.getAction())) {
+                mHandler.sendEmptyMessage(MSG_SESSION_STOP);
             } else if (ACTION_PROJECTION.equals(intent.getAction())) {
                 mProjectionResultCode = intent.getIntExtra(KEY_RESULT_CODE, Activity.RESULT_CANCELED);
                 mProjectionResultData = intent.getParcelableExtra(KEY_RESULT_DATA);
-                sLogger.trace("ACTION_PROJECTION_RESULT resultCode:{} resultData:{}", mProjectionResultCode, mProjectionResultData);
+                sLogger.trace("ACTION_PROJECTION resultCode:{} resultData:{}", mProjectionResultCode, mProjectionResultData);
                 if (Activity.RESULT_OK == mProjectionResultCode) {
                     doStartSession(mProjectionResultCode, mProjectionResultData);
                 } else {
@@ -267,7 +271,7 @@ public class AppService extends Service {
     }
 
     private boolean handleServerStartCommand() {
-        sLogger.trace("+");
+        sLogger.trace("+ {}", mState);
         if (State.STOPPED != mState) {
             sLogger.trace("- server already started");
             return false;
@@ -305,7 +309,7 @@ public class AppService extends Service {
     }
 
     private boolean handleServerStopCommand() {
-        sLogger.trace("+");
+        sLogger.trace("+ {}", mState);
         if (State.STARTED != mState && State.STARTING != mState) {
             sLogger.trace("- server not started");
             return false;
@@ -314,8 +318,13 @@ public class AppService extends Service {
 
         stopSelf();
 
-        mHttpServer.stop();
-        mWsServer.stop();
+        if (mProjection != null) {
+            doStopSession();
+        }
+        if (! mRtmpEnabled) {
+            mHttpServer.stop();
+            mWsServer.stop();
+        }
 
         mNotifier.onServerStop();
 
@@ -325,7 +334,7 @@ public class AppService extends Service {
     }
 
     private boolean handleSessionStartCommand() {
-        sLogger.trace("+");
+        sLogger.trace("+ {}", mState);
 
         if (State.STARTED != mState) {
             sLogger.trace("- server not started");
@@ -392,7 +401,7 @@ public class AppService extends Service {
 
     // May be after server stopped, so do not check current state
     private boolean handleSessionStopCommand() {
-        sLogger.trace("+");
+        sLogger.trace("+ {}", mState);
 
         if (mWakeLock != null) {
             sLogger.info("Release power lock");
@@ -496,9 +505,6 @@ public class AppService extends Service {
 
     public void doStopServer() {
         sLogger.trace("");
-        if (mProjection != null) {
-            doStopSession();
-        }
         mHandler.removeMessages(MSG_SERVER_STOP);
         mHandler.obtainMessage(MSG_SERVER_STOP).sendToTarget();
     }
@@ -555,17 +561,22 @@ public class AppService extends Service {
         return bitRate;
     }
 
-    // Notification will send intent to close the server
-    public static Intent createCloseIntent(Context context) {
-        return new Intent(context, AppService.class).setAction(ACTION_CLOSE);
+    // Notification will send intent to stop the server
+    public static Intent createServerStopIntent(Context context) {
+        return new Intent(context, AppService.class)
+                .setAction(ACTION_SERVER_STOP);
+    }
+
+    public static Intent createSessionStopIntent(Context context) {
+        return new Intent(context, AppService.class)
+                .setAction(ACTION_SESSION_STOP);
     }
 
     public static Intent createProjectionIntent(Context context, int resultCode, Intent resultData) {
-        Intent intent = new Intent(context, AppService.class);
-        intent.setAction(ACTION_PROJECTION);
-        intent.putExtra(KEY_RESULT_CODE, resultCode);
-        intent.putExtra(KEY_RESULT_DATA, resultData);
-        return intent;
+        return new Intent(context, AppService.class)
+                .setAction(ACTION_PROJECTION)
+                .putExtra(KEY_RESULT_CODE, resultCode)
+                .putExtra(KEY_RESULT_DATA, resultData);
     }
 
     private void setServerState(State s) {

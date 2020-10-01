@@ -28,21 +28,19 @@ public class AppNotifier {
     private NotificationCompat.Builder mNotifyBuilderReady;
     private NotificationCompat.Builder mNotifyBuilderBusy;
 
-    private boolean mIsServerStart;
-    private boolean mIsSessionStart;
+    private enum State { IDLE, READY, BUSY }
+    private State mState = State.IDLE;
 
     public void onCreate(Context context) {
         //mLogger.trace("");
 
-        Intent intent = new Intent(context, MainActivity.class);
-        intent.setAction(Intent.ACTION_VIEW);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        //intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        //intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        Intent intent = new Intent(context, MainActivity.class)
+                .setAction(Intent.ACTION_VIEW)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
         PendingIntent viewIntent = PendingIntent.getActivity(context, 0, intent, 0);
-        PendingIntent closeIntent = PendingIntent.getService(context, 0, AppService.createCloseIntent(context), 0);
 
         mContext = context;
         mNotifyMgr = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -54,78 +52,82 @@ public class AppNotifier {
             mNotifyMgr.createNotificationChannel(channel);
         }
 
-        mNotifyBuilderReady = new NotificationCompat.Builder(context, NOTIFY_CHANNEL);
-        mNotifyBuilderReady.setContentIntent(viewIntent);
-        mNotifyBuilderReady.setContentTitle(context.getString(R.string.app_name));
-        mNotifyBuilderReady.setContentText(context.getString(R.string.notify_ready));
-        mNotifyBuilderReady.setOngoing(true);
-        mNotifyBuilderReady.setWhen(0);
-        mNotifyBuilderReady.setPriority(NotificationCompat.PRIORITY_LOW);
-        mNotifyBuilderReady.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
-        mNotifyBuilderReady.setSmallIcon(R.drawable.ic_present_to_all_white_24dp);
-        mNotifyBuilderReady.addAction(R.drawable.ic_close_white_24dp, context.getString(R.string.notify_button_close), closeIntent);
+        mNotifyBuilderReady = new NotificationCompat.Builder(context, NOTIFY_CHANNEL)
+                .setContentIntent(viewIntent)
+                .setContentTitle(context.getString(R.string.app_name))
+                .setContentText(context.getString(R.string.notify_ready))
+                .setOngoing(true)
+                .setWhen(0)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher))
+                .setSmallIcon(R.drawable.ic_present_to_all_white_24dp)
+                .addAction(R.drawable.ic_close_white_24dp,
+                        context.getString(R.string.notify_button_close),
+                        PendingIntent.getService(context, 0, AppService.createServerStopIntent(context), 0));
 
-        mNotifyBuilderBusy = new NotificationCompat.Builder(context, NOTIFY_CHANNEL);
-        mNotifyBuilderBusy.setContentIntent(viewIntent);
-        mNotifyBuilderBusy.setContentTitle(context.getString(R.string.app_name));
-        mNotifyBuilderBusy.setContentText(context.getString(R.string.notify_busy));
-        mNotifyBuilderBusy.setOngoing(true);
-        mNotifyBuilderBusy.setWhen(0);
-        mNotifyBuilderBusy.setPriority(NotificationCompat.PRIORITY_LOW);
-        mNotifyBuilderBusy.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
-        mNotifyBuilderBusy.setSmallIcon(R.drawable.ic_cast_connected_white_24dp);
-        mNotifyBuilderBusy.addAction(R.drawable.ic_close_white_24dp, context.getString(R.string.notify_button_close), closeIntent);
+        mNotifyBuilderBusy = new NotificationCompat.Builder(context, NOTIFY_CHANNEL)
+                .setContentIntent(viewIntent)
+                .setContentTitle(context.getString(R.string.app_name))
+                .setContentText(context.getString(R.string.notify_busy))
+                .setOngoing(true)
+                .setWhen(0)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher))
+                .setSmallIcon(R.drawable.ic_cast_connected_white_24dp)
+                .addAction(R.drawable.ic_close_white_24dp,
+                        context.getString(R.string.notify_button_stop),
+                        PendingIntent.getService(context, 0, AppService.createSessionStopIntent(context), 0));
     }
 
     public void onSessionStart() {
         //mLogger.trace("");
-        if (! mIsSessionStart) {
-            mIsSessionStart = true;
-            if (mNotifyBuilderBusy != null) {
-                notify(NOTIFY_ID, mNotifyBuilderBusy.build());
-                mLogger.debug("BUSY");
-            }
+        if (!State.IDLE.equals(mState)) return;
+
+        mState = State.BUSY;
+        mLogger.debug("{}", mState);
+        if (mNotifyBuilderBusy != null) {
+            notify(NOTIFY_ID, mNotifyBuilderBusy.build());
         }
     }
 
     public void onSessionStop() {
         //mLogger.trace("");
-        if (mIsSessionStart) {
-            mIsSessionStart = false;
-            if (mNotifyBuilderReady != null) {
-                notify(NOTIFY_ID, mNotifyBuilderReady.build());
-                mLogger.debug("READY");
-            }
+        if (!State.BUSY.equals(mState)) return;
+
+        mState = State.READY;
+        mLogger.debug("{}", mState);
+        if (mNotifyBuilderReady != null) {
+            notify(NOTIFY_ID, mNotifyBuilderReady.build());
         }
     }
 
     public void onServerStart() {
         //mLogger.trace("");
-        if (! mIsServerStart) {
-            mIsServerStart = true;
-            if (mNotifyBuilderReady != null) {
-                notify(NOTIFY_ID, mNotifyBuilderReady.build());
-                mLogger.debug("READY");
-            }
+        if (!State.IDLE.equals(mState)) return;
+
+        mState = State.READY;
+        mLogger.debug("{}", mState);
+        if (mNotifyBuilderReady != null) {
+            notify(NOTIFY_ID, mNotifyBuilderReady.build());
         }
     }
 
     public void onServerStop() {
         //mLogger.trace("");
-        if (mIsServerStart) {
-            mIsServerStart = false;
-            mIsSessionStart = false;
-            if (mNotifyMgr != null) {
-                mNotifyMgr.cancelAll();
-            }
-            mLogger.debug("CANCEL ALL");
+        if (!State.READY.equals(mState)) return;
+
+        mState = State.IDLE;
+        mLogger.debug("{}", mState);
+        if (mNotifyMgr != null) {
+            mNotifyMgr.cancelAll();
+        }
+        if (mContext instanceof Service) {
+            ((Service) mContext).stopForeground(true);
         }
     }
 
     public void onDestroy() {
         //mLogger.trace("");
-        mIsServerStart = false;
-        mIsSessionStart = false;
         mNotifyMgr.cancelAll();
         mNotifyMgr = null;
         mNotifyBuilderReady = null;
@@ -136,7 +138,7 @@ public class AppNotifier {
     }
 
     private void notify(int id, Notification notify) {
-        //mLogger.trace("id:{}", id);
+        //mLogger.trace("id:{} notify:{}", id, notify);
         if (mContext instanceof Service) {
             ((Service) mContext).startForeground(id, notify);
         } else {
