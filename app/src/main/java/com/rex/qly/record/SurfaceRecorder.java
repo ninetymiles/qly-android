@@ -9,6 +9,7 @@ import android.os.Environment;
 import android.util.Range;
 import android.view.Surface;
 
+import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 
 import org.slf4j.Logger;
@@ -103,14 +104,14 @@ public class SurfaceRecorder {
         MediaFormat fmt = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         fmt.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         fmt.setInteger(MediaFormat.KEY_BIT_RATE, bitRate);
-        fmt.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2);
+        fmt.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
         fmt.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             fmt.setInteger(MediaFormat.KEY_PROFILE, codecProfile);
             fmt.setInteger(MediaFormat.KEY_LEVEL, codecLevel);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            fmt.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000);
+            fmt.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000); // microseconds
         }
         mLogger.debug("Codec config format <{}>", fmt);
 
@@ -150,10 +151,9 @@ public class SurfaceRecorder {
                         } else {
                             // FIXME: Some device may auto include SPS and PPS in IDR frame, need remove it manually
                             // FIXME: Convert Annex-B to Avcc, avoid mixing with SEI frame still contain csd
-                            mLogger.info("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
-                            //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
-
                             long timeOffset = (info.presentationTimeUs - mStartTime) / 1000; // Convert microseconds(10^-6) to milliseconds(10^-3)
+                            mLogger.info("Got {} - {} time:{}ms", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining(), timeOffset);
+                            //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
                             if (mOutputCallback != null) {
                                 mOutputCallback.onFrame(outBuffer, info.offset, info.size, timeOffset);
                             }
@@ -237,6 +237,7 @@ public class SurfaceRecorder {
             mDelegate = cb;
         }
 
+        @CallSuper
         @Override
         public void onFormat(int width, int height) {
             if (mDelegate != null) {
@@ -244,6 +245,7 @@ public class SurfaceRecorder {
             }
         }
 
+        @CallSuper
         @Override
         public void onConfig(ByteBuffer sps, ByteBuffer pps) {
             if (mDelegate != null) {
@@ -251,6 +253,7 @@ public class SurfaceRecorder {
             }
         }
 
+        @CallSuper
         @Override
         public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
             if (mDelegate != null) {
@@ -258,6 +261,7 @@ public class SurfaceRecorder {
             }
         }
 
+        @CallSuper
         @Override
         public void onEnd() {
             if (mDelegate != null) {
