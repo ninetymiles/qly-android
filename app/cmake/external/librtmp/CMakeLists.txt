@@ -1,5 +1,5 @@
 
-set(LIBRTMP_SRC_DIR "rtmpdump-2.3/librtmp")
+set(LIBRTMP_SRC_DIR "rtmpdump-2.4/librtmp")
 
 # TODO: Link with OpenSSL to enable crypto supports
 add_definitions("-DNO_CRYPTO")
