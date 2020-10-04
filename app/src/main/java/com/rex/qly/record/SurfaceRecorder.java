@@ -33,7 +33,6 @@ public class SurfaceRecorder {
     private Surface mInputSurface;
     private SurfaceCallback mSurfaceCallback;
     private OutputCallback mOutputCallback;
-    private long mStartTime;
 
     public interface SurfaceCallback {
         void onSurface(Surface surface);
@@ -59,7 +58,6 @@ public class SurfaceRecorder {
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public synchronized SurfaceRecorder start(int width, int height, int frameRate, int bitRate) {
         mLogger.trace("+ width:{} height:{} frameRate:{} bitRate:{}", width, height, frameRate, bitRate);
-        mStartTime = 0;
 
         try {
             mCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
@@ -128,9 +126,6 @@ public class SurfaceRecorder {
                 @Override
                 public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index, @NonNull MediaCodec.BufferInfo info) {
                     mLogger.trace("index:{} flags:{} offset:{} size:{} presentationTimeUs:{}", index, info.flags, info.offset, info.size, info.presentationTimeUs);
-                    if (mStartTime == 0) {
-                        mStartTime = info.presentationTimeUs;
-                    }
                     ByteBuffer outBuffer = codec.getOutputBuffer(index); // DirectByteBuffer
                     if (outBuffer != null) {
                         outBuffer.position(info.offset);
@@ -151,11 +146,10 @@ public class SurfaceRecorder {
                         } else {
                             // FIXME: Some device may auto include SPS and PPS in IDR frame, need remove it manually
                             // FIXME: Convert Annex-B to Avcc, avoid mixing with SEI frame still contain csd
-                            long timeOffset = (info.presentationTimeUs - mStartTime) / 1000; // Convert microseconds(10^-6) to milliseconds(10^-3)
-                            mLogger.info("Got {} - {} time:{}ms", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining(), timeOffset);
+                            mLogger.info("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
                             //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
                             if (mOutputCallback != null) {
-                                mOutputCallback.onFrame(outBuffer, info.offset, info.size, timeOffset);
+                                mOutputCallback.onFrame(outBuffer, info.offset, info.size, info.presentationTimeUs);
                             }
                         }
                         codec.releaseOutputBuffer(index, false);

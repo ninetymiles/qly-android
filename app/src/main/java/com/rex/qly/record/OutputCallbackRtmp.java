@@ -41,7 +41,7 @@ public class OutputCallbackRtmp implements SurfaceRecorder.OutputCallback {
     @Override
     public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
         mLogger.trace("offset:{} size:{} pts:{}", offset, size, pts);
-        mRtmp.sendVideoFrame(buffer, offset, size, pts);
+        mRtmp.sendVideoFrame(buffer, offset, size, System.currentTimeMillis()); // timestamp use milliseconds(10^-3)
     }
 
     @Override
