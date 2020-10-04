@@ -79,6 +79,11 @@ Java_com_rex_qly_Rtmp_nativeSendVideoConfig(JNIEnv * env, jclass clazz,
         jlong ptr, jobject jsps, jobject jpps)
 {
     RTMP * rtmp = reinterpret_cast<RTMP*>(ptr);
+    if (! rtmp) {
+        LOGW("RTMP not connected");
+        return 0;
+    }
+
     uint8_t * sps = (uint8_t *) env->GetDirectBufferAddress(jsps);
     int64_t sps_size = env->GetDirectBufferCapacity(jsps);
     uint8_t * pps = (uint8_t *) env->GetDirectBufferAddress(jpps);
@@ -164,6 +169,11 @@ Java_com_rex_qly_Rtmp_nativeSendVideoData(JNIEnv * env, jclass clazz,
         jlong ptr, jobject jdata, jint offset, jint size, jlong pts)
 {
     RTMP * rtmp = reinterpret_cast<RTMP*>(ptr);
+    if (! rtmp) {
+        LOGW("RTMP not connected");
+        return 0;
+    }
+
     uint8_t * data = (uint8_t *) env->GetDirectBufferAddress(jdata);
     LOGV("nativeSendVideoData+ rtmp:%p data:%p offset:%d size:%d pts:%" PRId64, rtmp, data, offset, size, pts);
     //(data + offset, (size_t) std::min(size, 128), "AnnexB");
@@ -245,8 +255,10 @@ Java_com_rex_qly_Rtmp_nativeClose(JNIEnv * env, jclass clazz, jlong ptr)
 {
     RTMP * rtmp = reinterpret_cast<RTMP*>(ptr);
     LOGV("nativeRelease rtmp:%p", rtmp);
-    RTMP_Close(rtmp);
-    RTMP_Free(rtmp);
+    if (rtmp) {
+        RTMP_Close(rtmp);
+        RTMP_Free(rtmp);
+    }
 }
 
 void
