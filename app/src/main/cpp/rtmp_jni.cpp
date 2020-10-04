@@ -217,7 +217,7 @@ Java_com_rex_qly_Rtmp_nativeSendVideoData(JNIEnv * env, jclass clazz,
             memcpy(&body[i], data + pos, (size_t) len);
             i += len;
 
-            packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
+            packet.m_headerType = RTMP_PACKET_SIZE_MEDIUM;
             packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
             packet.m_hasAbsTimestamp = 0;
             packet.m_nChannel = 0x06;
