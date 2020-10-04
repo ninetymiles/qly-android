@@ -30,7 +30,7 @@ Java_com_rex_qly_Rtmp_nativeVersion(JNIEnv* env, jclass clazz)
 }
 
 extern "C"
-JNIEXPORT long JNICALL
+JNIEXPORT jlong JNICALL
 Java_com_rex_qly_Rtmp_nativeOpen(JNIEnv* env, jclass clazz, jstring jurl)
 {
     const char * url = env->GetStringUTFChars(jurl, nullptr);
