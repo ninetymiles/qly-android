@@ -130,12 +130,7 @@ public class SurfaceRecorder {
                     if (outBuffer != null) {
                         outBuffer.position(info.offset);
                         outBuffer.limit(info.offset + info.size);
-                        if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                            mLogger.info("Got END_OF_STREAM");
-                            if (mOutputCallback != null) {
-                                mOutputCallback.onEnd();
-                            }
-                        } else if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) > 0) { // pts may be zero
+                        if ((info.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) > 0) { // pts may be zero
                             mLogger.info("Got CODEC_CONFIG - {}", outBuffer.remaining());
                             //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, info.size));
                             // Nexus9 may provide valid PTS, Pixel may provide zero PTS
@@ -218,6 +213,9 @@ public class SurfaceRecorder {
         if (mInputSurface != null) {
             mInputSurface.release();
             mInputSurface = null;
+        }
+        if (mOutputCallback != null) {
+            mOutputCallback.onEnd();
         }
         mLogger.trace("-");
         return this;
