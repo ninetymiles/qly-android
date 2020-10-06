@@ -40,9 +40,9 @@ armeabi-v7a)
     TARGET_TRIPLE="arm-linux-androideabi"
     TARGET_TRIPLE_COMPILER="armv7a-linux-androideabi"
     EXTRA_CFLAGS="-march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mtune=cortex-a8"
-    #EXTRA_LDFLAGS="-march=armv7-a --fix-cortex-a8"
+    EXTRA_LDFLAGS="-march=armv7-a --fix-cortex-a8" # NDKr21b lld also support --fix-cortex-a8
     #EXTRA_LDFLAGS="-march=armv7-a -Wl,--fix-cortex-a8" # Use clang to link should use '-Wl,--fix-cortex-a8' to pass for ld correctly
-    EXTRA_LDFLAGS="-march=armv7-a" # With lld, remove the fix-cortex-*
+    #EXTRA_LDFLAGS="-march=armv7-a" # With lld, remove the fix-cortex-a8
     ;;
 arm64-v8a) # AArch-64
     FFMPEG_ARCH=aarch64 #arm64
@@ -93,7 +93,9 @@ LLVM_PREFIX="${NDK_PATH}/toolchains/llvm/prebuilt/${NDK_HOST_TAG}"
 export CC="${LLVM_PREFIX}/bin/${TARGET_TRIPLE_COMPILER}${ANDROID_API}-clang"
 #export CPP="${LLVM_PREFIX}/bin/${TARGET_TRIPLE_COMPILER}${ANDROID_API}-clang -E"
 export CXX="${LLVM_PREFIX}/bin/${TARGET_TRIPLE_COMPILER}${ANDROID_API}-clang++"
-#export LD="${LLVM_PREFIX}/bin/${TARGET_TRIPLE}-ld" # armeabi-v7a, x86, x86_64 use ld.gold, aarch64-v8a use ld.bfd
+# Default use ${LLVM_PREFIX}/arm-linux-androideabi/bin/ld which may got 'error: cannot find -lunwind'
+# Force use ${LLVM_PREFIX}/bin/arm-linux-androideabi-ld could fix this
+export LD="${LLVM_PREFIX}/bin/${TARGET_TRIPLE}-ld" # armeabi-v7a, x86, x86_64 use ld.gold, aarch64-v8a use ld.bfd
 #export LD="${LLVM_PREFIX}/bin/${TARGET_TRIPLE}-ld.bfd"
 #export LD="${LLVM_PREFIX}/bin/${TARGET_TRIPLE}-ld.gold"
 #export LD="${LLVM_PREFIX}/bin/ld.lld"
@@ -103,7 +105,7 @@ export CXX="${LLVM_PREFIX}/bin/${TARGET_TRIPLE_COMPILER}${ANDROID_API}-clang++"
 #export OBJDUMP="${LLVM_PREFIX}/bin/${TARGET_TRIPLE}-objdump"
 export CFLAGS="-D__ANDROID__ -D__ANDROID_API__=${ANDROID_API} -I${NDK_PATH}/sysroot/usr/include -I${NDK_PATH}/sysroot/usr/include/${TARGET_TRIPLE} ${EXTRA_CFLAGS}"
 export CXXFLAGS="${EXTRA_CXXFLAGS}"
-export LDFLAGS="${EXTRA_LDFLAGS}"
+export LDFLAGS="${EXTRA_LDFLAGS} -lc" # not linking libc correctly when configure, but will link correctly when compile
 export LIBS=""
 
 echo "AR: ${AR}"
@@ -153,7 +155,7 @@ echo "LIBS: ${LIBS}"
     --disable-filters \
     --disable-postproc \
     --disable-avfilter \
-    --disable-shared \
+    --enable-shared \
     --enable-static \
     --enable-avformat \
     --enable-protocol=rtmp \
@@ -162,5 +164,5 @@ echo "LIBS: ${LIBS}"
     --enable-pic \
     $FFMPEG_OPTIONS
 
-#--enable-jni \
+#--enable-jni
 
