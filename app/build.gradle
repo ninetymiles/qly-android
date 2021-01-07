@@ -48,10 +48,10 @@ android {
 dependencies {
     //implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.2.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.navigation:navigation-fragment:2.3.0'
-    implementation 'androidx.navigation:navigation-ui:2.3.0'
+    implementation 'androidx.navigation:navigation-fragment:2.3.2'
+    implementation 'androidx.navigation:navigation-ui:2.3.2'
     implementation 'androidx.preference:preference:1.1.1'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
 
@@ -63,7 +63,7 @@ dependencies {
     implementation 'org.nanohttpd:nanohttpd-webserver:2.3.1'
     implementation 'org.nanohttpd:nanohttpd-websocket:2.3.1'
 
-    testImplementation 'junit:junit:4.13'
+    testImplementation 'junit:junit:4.13.1'
     testImplementation 'androidx.test:core:1.3.0'
     testImplementation 'org.mockito:mockito-core:3.3.3'
     //testImplementation 'org.robolectric:robolectric:4.3.1'
@@ -85,8 +85,8 @@ dependencies {
 
 afterEvaluate {
     android.applicationVariants.all { variant ->
-        //println(“variant.name:" + variant.name)
-        //println(“variant.baseName:" + variant.baseName)
+        //println("variant.name:" + variant.name)
+        //println("variant.baseName:" + variant.baseName)
         //println("variant.flavorName:" + variant.flavorName)
 
         if (!variant.buildType.isDebuggable()) {
@@ -105,13 +105,17 @@ afterEvaluate {
                 }
 
                 // Publish mapping TXT
-                if (!variant.getMappingFileProvider().get().isEmpty()) {
-                    artifact project.tasks.create("generateMappingZipFor${name.capitalize()}Publication", Zip) {
-                        classifier "mapping"
-                        group "publishing"
-                        baseName variant.baseName // Default ${project.name}-mapping.zip may conflict with other flavors
-                        from variant.getMappingFileProvider().get()
+                try {
+                    if (!variant.mappingFileProvider.get().isEmpty()) {
+                        artifact project.tasks.create("generateMappingZipFor${name.capitalize()}Publication", Zip) {
+                            classifier "mapping"
+                            group "publishing"
+                            baseName variant.baseName // Default ${project.name}-mapping.zip may conflict with other flavors
+                            from variant.mappingFileProvider.get()
+                        }
                     }
+                } catch (Exception ex) {
+                    //ex.printStackTrace()
                 }
 
                 // Publish native stack ZIP
