@@ -44,12 +44,12 @@ Java_com_rex_qly_FFmpeg_nativeCreate(JNIEnv* env, jclass clazz)
 }
 
 extern "C"
-JNIEXPORT jlong JNICALL
+JNIEXPORT jboolean JNICALL
 Java_com_rex_qly_FFmpeg_nativeInitVideo(JNIEnv * env, jclass clazz,
         jlong ptr, jint width, jint height, jint fps, jint bps)
 {
     context * ctx = reinterpret_cast<context *>(ptr);
-    if (!ctx) return 0;
+    if (!ctx) return false;
     LOGV("nativeInitVideo+ ctx:%p width:%d height:%d fps:%d bps:%d", ctx, width, height, fps, bps);
 
     AVCodecContext * codec_ctx = avcodec_alloc_context3(avcodec_find_encoder(AV_CODEC_ID_H264));
@@ -65,16 +65,16 @@ Java_com_rex_qly_FFmpeg_nativeInitVideo(JNIEnv * env, jclass clazz,
     ctx->codec_ctx_video    = codec_ctx;
 
     LOGV("nativeInitVideo- codec_ctx:%p", codec_ctx);
-    return reinterpret_cast<intptr_t>(codec_ctx);
+    return true;
 }
 
 extern "C"
-JNIEXPORT jlong JNICALL
+JNIEXPORT jboolean JNICALL
 Java_com_rex_qly_FFmpeg_nativeInitAudio(JNIEnv * env, jclass clazz,
         jlong ptr, jint sample_rate, jint sample_size, jint channels)
 {
     context * ctx = reinterpret_cast<context *>(ptr);
-    if (!ctx) return 0;
+    if (!ctx) return false;
     LOGV("nativeInitAudio+ ctx:%p sample_rate:%d sample_size:%d channels:%d", ctx, sample_rate, sample_size, channels);
 
     AVCodecContext * codec_ctx = avcodec_alloc_context3(avcodec_find_encoder(AV_CODEC_ID_AAC));
@@ -87,15 +87,15 @@ Java_com_rex_qly_FFmpeg_nativeInitAudio(JNIEnv * env, jclass clazz,
     ctx->codec_ctx_audio    = codec_ctx;
 
     LOGV("nativeInitAudio- codec_ctx:%p", codec_ctx);
-    return reinterpret_cast<intptr_t>(codec_ctx);
+    return true;
 }
 
 extern "C"
-JNIEXPORT jlong JNICALL
+JNIEXPORT jboolean JNICALL
 Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jobject ptr, jstring jurl)
 {
     context * ctx = reinterpret_cast<context *>(ptr);
-    if (!ctx) return 0;
+    if (!ctx) return false;
 
     const char * url = env->GetStringUTFChars(jurl, nullptr);
     LOGV("nativeOpen+ ctx:%p url:<%s>", ctx, url);
@@ -152,7 +152,7 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jobject ptr, jstri
 exit:
     if (jurl) env->ReleaseStringUTFChars(jurl, url);
     LOGV("nativeOpen- fmt_ctx:%p", fmt_ctx);
-    return reinterpret_cast<intptr_t>(fmt_ctx);
+    return true;
 }
 
 extern "C"
