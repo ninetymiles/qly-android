@@ -10,7 +10,7 @@ public class FFmpeg implements Closeable {
 
     private final Logger mLogger = LoggerFactory.getLogger(FFmpeg.class);
 
-    private final long mNativePtr;
+    private final long mNativePtr; // An intptr_t for native struct context
 
     public FFmpeg() {
         mNativePtr = nativeCreate();

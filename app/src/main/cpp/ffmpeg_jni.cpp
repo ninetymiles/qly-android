@@ -48,7 +48,7 @@ JNIEXPORT jboolean JNICALL
 Java_com_rex_qly_FFmpeg_nativeInitVideo(JNIEnv * env, jclass clazz,
         jlong ptr, jint width, jint height, jint fps, jint bps)
 {
-    context * ctx = reinterpret_cast<context *>(ptr);
+    auto ctx = reinterpret_cast<context *>(ptr);
     if (!ctx) return false;
     LOGV("nativeInitVideo+ ctx:%p width:%d height:%d fps:%d bps:%d", ctx, width, height, fps, bps);
 
@@ -73,7 +73,7 @@ JNIEXPORT jboolean JNICALL
 Java_com_rex_qly_FFmpeg_nativeInitAudio(JNIEnv * env, jclass clazz,
         jlong ptr, jint sample_rate, jint sample_size, jint channels)
 {
-    context * ctx = reinterpret_cast<context *>(ptr);
+    auto ctx = reinterpret_cast<context *>(ptr);
     if (!ctx) return false;
     LOGV("nativeInitAudio+ ctx:%p sample_rate:%d sample_size:%d channels:%d", ctx, sample_rate, sample_size, channels);
 
@@ -92,9 +92,9 @@ Java_com_rex_qly_FFmpeg_nativeInitAudio(JNIEnv * env, jclass clazz,
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jobject ptr, jstring jurl)
+Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring jurl)
 {
-    context * ctx = reinterpret_cast<context *>(ptr);
+    auto ctx = reinterpret_cast<context *>(ptr);
     if (!ctx) return false;
 
     const char * url = env->GetStringUTFChars(jurl, nullptr);
@@ -160,14 +160,11 @@ JNIEXPORT jint JNICALL
 Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
         jlong ptr, jobject jdata, jint offset, jint size, jlong pts)
 {
-    AVFormatContext * fmt_ctx = reinterpret_cast<AVFormatContext *>(ptr);
-    if (!fmt_ctx) {
-        LOGW("FFmpeg not opened");
-        return 0;
-    }
+    auto ctx = reinterpret_cast<context *>(ptr);
+    if (!ctx) return 0;
 
     uint8_t * data = (uint8_t *) env->GetDirectBufferAddress(jdata);
-    LOGV("nativeSendVideoData+ fmt_ctx:%p data:%p offset:%d size:%d pts:%" PRId64, fmt_ctx, data, offset, size, pts);
+    LOGV("nativeSendVideoData+ ctx:%p fmt_ctx:%p data:%p offset:%d size:%d pts:%" PRId64, ctx, ctx->fmt_ctx, data, offset, size, pts);
 
     AVPacket pkt;
     av_init_packet(&pkt);
@@ -178,7 +175,7 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
 #endif
 
 //    av_packet_rescale_ts(&pkt, );
-    if (av_interleaved_write_frame(fmt_ctx, nullptr) < 0) {
+    if (av_interleaved_write_frame(ctx->fmt_ctx, nullptr) < 0) {
         LOGW("Failed to write frame");
     }
 
@@ -190,16 +187,13 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_rex_qly_FFmpeg_nativeClose(JNIEnv * env, jclass clazz, jlong ptr)
 {
-    AVFormatContext * fmt_ctx = reinterpret_cast<AVFormatContext *>(ptr);
-    if (!fmt_ctx) {
-        LOGW("FFmpeg not opened");
-        return;
-    }
-    LOGV("nativeClose fmt_ctx:%p", fmt_ctx);
+    auto ctx = reinterpret_cast<context *>(ptr);
+    if (!ctx) return;
+    LOGV("nativeClose ctx:%p fmt_ctx:%p", ctx, ctx->fmt_ctx);
 
-    av_write_trailer(fmt_ctx);
-    if (fmt_ctx && !(fmt_ctx->flags & AVFMT_NOFILE)) {
-        avio_close(fmt_ctx->pb);
+    av_write_trailer(ctx->fmt_ctx);
+    if (ctx->fmt_ctx && !(ctx->fmt_ctx->flags & AVFMT_NOFILE)) {
+        avio_close(ctx->fmt_ctx->pb);
     }
 }
 
@@ -207,8 +201,10 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_rex_qly_FFmpeg_nativeRelease(JNIEnv* env, jclass clazz, jlong ptr)
 {
-    context * ctx = reinterpret_cast<context *>(ptr);
+    auto ctx = reinterpret_cast<context *>(ptr);
     if (!ctx) return;
+    LOGV("nativeRelease ctx:%p", ctx);
+
     if (ctx->fmt_ctx) avformat_free_context(ctx->fmt_ctx);
     if (ctx->codec_ctx_video) avcodec_free_context(&ctx->codec_ctx_video);
     if (ctx->codec_ctx_audio) avcodec_free_context(&ctx->codec_ctx_audio);
