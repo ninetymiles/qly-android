@@ -22,6 +22,8 @@ struct context {
     AVFormatContext *   fmt_ctx;
     AVCodecContext *    codec_ctx_video;
     AVCodecContext *    codec_ctx_audio;
+    AVStream *          stream_video;
+    AVStream *          stream_audio;
 };
 
 extern "C"
@@ -39,6 +41,8 @@ Java_com_rex_qly_FFmpeg_nativeCreate(JNIEnv* env, jclass clazz)
     ctx->fmt_ctx = nullptr;
     ctx->codec_ctx_video = nullptr;
     ctx->codec_ctx_audio = nullptr;
+    ctx->stream_video = nullptr;
+    ctx->stream_audio = nullptr;
     LOGV("nativeCreate ctx:%p", ctx);
     return reinterpret_cast<intptr_t>(ctx);
 }
@@ -60,6 +64,7 @@ Java_com_rex_qly_FFmpeg_nativeInitVideo(JNIEnv * env, jclass clazz,
     codec_ctx->width        = width;
     codec_ctx->height       = height; // Resolution must be a multiple of two
     codec_ctx->bit_rate     = bps;
+    codec_ctx->framerate    = (AVRational) { fps, 1 };
     codec_ctx->time_base    = (AVRational) { 1, fps };
     codec_ctx->gop_size     = 12;
     ctx->codec_ctx_video    = codec_ctx;
@@ -133,6 +138,7 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
         if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
             stream->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
+        ctx->stream_video = stream;
     }
 
     av_dump_format(fmt_ctx, 0, url, 1);
@@ -170,12 +176,17 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
     av_init_packet(&pkt);
     pkt.data = data + offset;
     pkt.size = size;
+    pkt.pts = pts; // FIXME: In time_base units
+    pkt.dts = pkt.pts; // FIXME: In time_base units
+    pkt.stream_index = ctx->stream_video->index;
+    //pkt.duration = (ctx->stream_video->time_base.den) / ((ctx->stream_video->time_base.num) * ctx->codec_ctx_video->framerate.num); // FIXME: in AVStream->time_base units
+    pkt.duration = 0; // XXX: 0 if unknown
 #if (LOG_LEVEL <= LOG_LEVEL_VERBOSE)
-        dump_buffer(data + offset, (size_t) std::min(size, 128), "AnnexB");
+    dump_buffer(data + offset, (size_t) std::min(size, 128), "AnnexB");
 #endif
 
-//    av_packet_rescale_ts(&pkt, );
-    if (av_interleaved_write_frame(ctx->fmt_ctx, nullptr) < 0) {
+    //av_packet_rescale_ts(&pkt, );
+    if (av_interleaved_write_frame(ctx->fmt_ctx, &pkt) < 0) {
         LOGW("Failed to write frame");
     }
 
