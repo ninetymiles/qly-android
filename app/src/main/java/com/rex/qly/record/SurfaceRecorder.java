@@ -39,7 +39,7 @@ public class SurfaceRecorder {
     }
 
     public interface OutputCallback {
-        void onFormat(int width, int height);
+        void onFormat(int width, int height, int fps, int bps);
         void onConfig(ByteBuffer sps, ByteBuffer pps);
         void onFrame(ByteBuffer buffer, int offset, int size, long pts);
         void onEnd();
@@ -160,6 +160,7 @@ public class SurfaceRecorder {
                 }
                 @Override
                 public void onOutputFormatChanged(@NonNull MediaCodec codec, @NonNull MediaFormat format) {
+                    mLogger.debug("Codec output format <{}>", format);
                     int width  = format.getInteger(MediaFormat.KEY_WIDTH);
                     int height = format.getInteger(MediaFormat.KEY_HEIGHT);
                     if (format.containsKey("crop-left") && format.containsKey("crop-right")) {
@@ -168,10 +169,11 @@ public class SurfaceRecorder {
                     if (format.containsKey("crop-top") && format.containsKey("crop-bottom")) {
                         height = format.getInteger("crop-bottom") + 1 - format.getInteger("crop-top");
                     }
-                    mLogger.debug("Codec output format <{}>", format);
-                    mLogger.debug("Codec output size {}x{}", width, height);
+                    int frameRate = format.getInteger(MediaFormat.KEY_FRAME_RATE);
+                    int bitRate = format.getInteger(MediaFormat.KEY_BIT_RATE);
+                    mLogger.debug("Codec output size {}x{}@{}({})", width, height, frameRate, bitRate);
                     if (mOutputCallback != null) {
-                        mOutputCallback.onFormat(width, height);
+                        mOutputCallback.onFormat(width, height, frameRate, bitRate);
                     }
 
                     ByteBuffer spsBuffer = format.getByteBuffer("csd-0"); // HeapByteBuffer
@@ -232,9 +234,9 @@ public class SurfaceRecorder {
 
         @CallSuper
         @Override
-        public void onFormat(int width, int height) {
+        public void onFormat(int width, int height, int fps, int bps) {
             if (mDelegate != null) {
-                mDelegate.onFormat(width, height);
+                mDelegate.onFormat(width, height, fps, bps);
             }
         }
 
