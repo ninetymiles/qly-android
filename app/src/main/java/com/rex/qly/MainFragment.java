@@ -40,7 +40,7 @@ public class MainFragment extends Fragment {
     private AppServiceClient mServiceClient;
     private NetworkAddressDiscover mNetworkDiscover;
     private MainAddrAdapter mAddrAdapter;
-    private List<InetAddress> mAddrList = new ArrayList<InetAddress>();
+    private List<InetAddress> mAddrList = new ArrayList<>();
 
     public enum State { STOPPED, STOPPING, STARTED, STARTING }
     private State mState = State.STOPPED;

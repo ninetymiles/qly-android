@@ -40,8 +40,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         sLogger.trace("");
-        switch (item.getItemId()) {
-        case R.id.action_settings:
+        if (item.getItemId() == R.id.action_settings) {
             startActivity(new Intent(this, PreferenceViewActivity.class));
             return true;
         }
