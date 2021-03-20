@@ -11,7 +11,7 @@ A desktop live streaming app.
 
 ## Background
 
-It is a demostrate for remote desktop solution, with minimum client requirement, any device can use browser to access the device directly.
+It is a demostrate for remote desktop solution with minimum client requirement, any device can use browser to access the device directly.
 
 View only for now.
 
