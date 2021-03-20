@@ -48,7 +48,7 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
     @Override
     public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
         mLogger.trace("offset:{} size:{} pts:{}", offset, size, pts);
-        mFFmpeg.sendVideoData(buffer, offset, size, System.currentTimeMillis()); // timestamp use milliseconds(10^-3)
+        mFFmpeg.sendVideoData(buffer, offset, size, pts); // pts is microseconds(10^-6)
     }
 
     @Override

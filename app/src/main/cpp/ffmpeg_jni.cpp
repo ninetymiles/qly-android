@@ -67,6 +67,8 @@ Java_com_rex_qly_FFmpeg_nativeInitVideo(JNIEnv * env, jclass clazz,
     codec_ctx->framerate    = (AVRational) { fps, 1 };
     codec_ctx->time_base    = (AVRational) { 1, fps };
     codec_ctx->gop_size     = 12;
+    //codec_ctx->profile      = FF_PROFILE_H264_BASELINE;
+    //codec_ctx->level        = ;
     ctx->codec_ctx_video    = codec_ctx;
 
     LOGV("nativeInitVideo- codec_ctx:%p", codec_ctx);
@@ -105,6 +107,10 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
     const char * url = env->GetStringUTFChars(jurl, nullptr);
     LOGV("nativeOpen+ ctx:%p url:<%s>", ctx, url);
 
+//    int64_t ts = av_gettime_relative(); // same time as pts
+//    AVRational tb = av_get_time_base_q();
+//    LOGV("nativeOpen ts:%" PRId64 " tb:%d/%d", ts, tb.num, tb.den);
+
     AVFormatContext * fmt_ctx = nullptr;
     avformat_alloc_output_context2(&fmt_ctx, nullptr, "flv", url);
     if (!fmt_ctx) {
@@ -115,17 +121,20 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
 
     if (ctx->codec_ctx_video) {
         fmt_ctx->oformat->video_codec = ctx->codec_ctx_video->codec_id;
+        //AVStream * stream = avformat_new_stream(fmt_ctx, ctx->codec_ctx_video->codec);
         AVStream * stream = avformat_new_stream(fmt_ctx, nullptr);
         if (!stream) {
             LOGW("Failed to allocate output stream");
             goto exit;
         }
         stream->id = fmt_ctx->nb_streams - 1;
-        stream->time_base = (AVRational) { 1, 30 }; // FIXME: Use correct FPS here
+        //stream->time_base = ctx->codec_ctx_video->time_base;
+        stream->time_base = (AVRational) { 1, 1000000 }; // pts in microseconds (10^-6)
+        stream->start_time = AV_NOPTS_VALUE;
 
         AVCodecParameters * params = stream->codecpar;
         avcodec_parameters_from_context(params, ctx->codec_ctx_video);
-        LOGD("codec_type:%d codec_id:%d codec_tag:%d profile:%d level:%d format:%d width:%d height:%d",
+        LOGD("AVCodecParameters codec_type:%d codec_id:%d codec_tag:%d profile:%d level:%d format:%d width:%d height:%d",
              params->codec_type,
              params->codec_id,
              params->codec_tag,
@@ -139,8 +148,8 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
             stream->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
         ctx->stream_video = stream;
+        LOGD("AVStream id:%d time_base:%d/%d", stream->id, stream->time_base.num, stream->time_base.den);
     }
-
     av_dump_format(fmt_ctx, 0, url, 1);
 
     if (!(fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
@@ -170,15 +179,19 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
     if (!ctx) return 0;
     if (!ctx->stream_video) return 0;
 
-    uint8_t * data = (uint8_t *) env->GetDirectBufferAddress(jdata);
-    LOGV("nativeSendVideoData+ ctx:%p fmt_ctx:%p data:%p offset:%d size:%d pts:%" PRId64, ctx, ctx->fmt_ctx, data, offset, size, pts);
+    auto data = (uint8_t *) env->GetDirectBufferAddress(jdata);
+    LOGV("nativeSendVideoData+ ctx:%p fmt_ctx:%p data:%p pts:%" PRId64 " offset:%d size:%d", ctx, ctx->fmt_ctx, data, pts, offset, size);
+
+//    int64_t calc_duration=(double)AV_TIME_BASE/av_q2d(ifmt_ctx->streams[videoindex]->r_frame_rate);
+//    //Parameters
+//    pkt.pts=(double)(frame_index*calc_duration)/(double)(av_q2d(time_base1)*AV_TIME_BASE);
 
     AVPacket pkt;
     av_init_packet(&pkt);
     pkt.data = data + offset;
     pkt.size = size;
-    pkt.pts = pts; // FIXME: In time_base units
-    pkt.dts = pkt.pts; // FIXME: In time_base units
+    pkt.pts = pts; // presentationTimeUs is microseconds (10^-6)
+    pkt.dts = pkt.pts;
     pkt.stream_index = ctx->stream_video->index;
     //pkt.duration = (ctx->stream_video->time_base.den) / ((ctx->stream_video->time_base.num) * ctx->codec_ctx_video->framerate.num); // FIXME: in AVStream->time_base units
     pkt.duration = 0; // XXX: 0 if unknown
