@@ -1,4 +1,4 @@
-#define LOG_TAG     "jni"
+#define LOG_TAG     "libffmpegjni"
 #define LOG_LEVEL   LOG_LEVEL_ALL
 
 #include <algorithm>
@@ -168,6 +168,7 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
 {
     auto ctx = reinterpret_cast<context *>(ptr);
     if (!ctx) return 0;
+    if (!ctx->stream_video) return 0;
 
     uint8_t * data = (uint8_t *) env->GetDirectBufferAddress(jdata);
     LOGV("nativeSendVideoData+ ctx:%p fmt_ctx:%p data:%p offset:%d size:%d pts:%" PRId64, ctx, ctx->fmt_ctx, data, offset, size, pts);
@@ -202,9 +203,11 @@ Java_com_rex_qly_FFmpeg_nativeClose(JNIEnv * env, jclass clazz, jlong ptr)
     if (!ctx) return;
     LOGV("nativeClose ctx:%p fmt_ctx:%p", ctx, ctx->fmt_ctx);
 
-    av_write_trailer(ctx->fmt_ctx);
-    if (ctx->fmt_ctx && !(ctx->fmt_ctx->flags & AVFMT_NOFILE)) {
-        avio_close(ctx->fmt_ctx->pb);
+    if (ctx->fmt_ctx) {
+        av_write_trailer(ctx->fmt_ctx);
+        if (!(ctx->fmt_ctx->flags & AVFMT_NOFILE)) {
+            avio_close(ctx->fmt_ctx->pb);
+        }
     }
 }
 

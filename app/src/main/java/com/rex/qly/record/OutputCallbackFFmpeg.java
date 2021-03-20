@@ -13,16 +13,26 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
 
     private final FFmpeg mFFmpeg;
 
-    public OutputCallbackFFmpeg(String url) {
+    public OutputCallbackFFmpeg() {
         mLogger.trace("");
         mFFmpeg = new FFmpeg();
+    }
+
+    public OutputCallbackFFmpeg initVideo(int width, int height, int fps, int bps) {
+        mLogger.trace("width:{} height:{} fps:{} bps:{}", width, height, fps, bps);
+        mFFmpeg.initVideo(width, height, fps, bps);
+        return this;
+    }
+
+    public OutputCallbackFFmpeg open(String url) {
+        mLogger.trace("url:<{}>", url);
         mFFmpeg.open(url);
+        return this;
     }
 
     @Override
     public void onFormat(int width, int height, int fps, int bps) {
         mLogger.trace("width:{} height:{} fps:{} bps:{}", width, height, fps, bps);
-        mFFmpeg.initVideo(width, height, fps, bps);
     }
 
     @Override
