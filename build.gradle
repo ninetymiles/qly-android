@@ -4,7 +4,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.2'
+        classpath 'com.android.tools.build:gradle:4.1.3'
     }
 }
 
@@ -13,6 +13,12 @@ allprojects {
         google()
         jcenter()
     }
+
+//    // Compile with arguments -Xlint:unchecked -Xlint:deprecation
+//    tasks.withType(JavaCompile) {
+//        options.compilerArgs << '-Xlint:unchecked'
+//        options.deprecation = true
+//    }
 
     afterEvaluate { // Make sure load project.version from projects
         plugins.withId('maven-publish') {
