@@ -68,7 +68,8 @@ public class SurfaceRecorder {
 
         if (frameRate <= 0) frameRate = 30;
         int codecProfile = MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline;
-        int codecLevel = MediaCodecInfo.CodecProfileLevel.AVCLevel41;
+        int codecLevel = MediaCodecInfo.CodecProfileLevel.AVCLevel31; // 3.1 for 720P
+        if (height >= 1080) codecLevel = MediaCodecInfo.CodecProfileLevel.AVCLevel4; // 4.0 for 1080P
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
                 MediaCodecInfo codecInfo = mCodec.getCodecInfo();
