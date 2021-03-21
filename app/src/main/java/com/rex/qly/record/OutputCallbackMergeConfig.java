@@ -22,6 +22,8 @@ public class OutputCallbackMergeConfig extends SurfaceRecorder.OutputCallbackWra
     @Override
     public void onConfig(ByteBuffer sps, ByteBuffer pps) {
         super.onConfig(sps, pps);
+        sps.rewind();
+        pps.rewind();
         mLogger.trace("sps:{} pps:{}", sps.remaining(), pps.remaining());
         if (!sps.isDirect()) {
             sps = ByteBuffer.allocateDirect(sps.remaining()).put(sps);

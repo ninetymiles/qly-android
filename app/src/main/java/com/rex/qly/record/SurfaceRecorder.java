@@ -180,6 +180,9 @@ public class SurfaceRecorder {
                     ByteBuffer ppsBuffer = format.getByteBuffer("csd-1"); // HeapByteBuffer
                     //mLogger.debug("SPS:<{}>", Debug.dumpByteBuffer(spsBuffer, 0, spsBuffer.remaining()));
                     //mLogger.debug("PPS:<{}>", Debug.dumpByteBuffer(ppsBuffer, 0, ppsBuffer.remaining()));
+                    // MIX2
+                    // SPS: 00 00 00 01 67 42 80 1f da 02 20 22 7b 96 52 0a 0c 0c 0d a1 42 6a
+                    // PPS: 00 00 00 01 68 ce 06 e2
                     if (mOutputCallback != null) {
                         mOutputCallback.onConfig(spsBuffer, ppsBuffer);
                     }

@@ -48,6 +48,11 @@ public class FFmpeg implements Closeable {
         return nativeOpen(mNativePtr, url);
     }
 
+    public boolean sendVideoCodec(ByteBuffer data, int offset, int size) {
+        mLogger.trace("this:{} offset:{} size:{}", hashCode(), offset, size);
+        return (mNativePtr != 0 && nativeSendVideoCodec(mNativePtr, data, offset, size) > 0);
+    }
+
     public boolean sendVideoData(ByteBuffer data, int offset, int size, long pts) {
         mLogger.trace("this:{} offset:{} size:{} pts:{}", hashCode(), offset, size, pts);
         return (mNativePtr != 0 && nativeSendVideoData(mNativePtr, data, offset, size, pts) > 0);
@@ -57,6 +62,7 @@ public class FFmpeg implements Closeable {
     private static native boolean nativeInitVideo(long ptr, int width, int height, int fps, int bps);
     private static native boolean nativeInitAudio(long ptr, int sampleRate, int sampleSize, int channels);
     private static native boolean nativeOpen(long ptr, String url);
+    private static native int nativeSendVideoCodec(long ptr, ByteBuffer data, int offset, int size);
     private static native int nativeSendVideoData(long ptr, ByteBuffer data, int offset, int size, long pts);
     private static native void nativeClose(long ptr);
     private static native void nativeRelease(long ptr);

@@ -13,8 +13,12 @@ extern "C" {
 #include <libavutil/time.h>
 }
 
+#include "nalu.h"
 #include "debug.h"
 #include "logging.h"
+
+//#define DUMP_H264_CODEC
+//#define DUMP_H264_DATA
 
 void __cb_ffmpeg_log(void * ptr, int level, const char * fmt, va_list vargs);
 
@@ -24,6 +28,7 @@ struct context {
     AVCodecContext *    codec_ctx_audio;
     AVStream *          stream_video;
     AVStream *          stream_audio;
+    const char *        url;
 };
 
 extern "C"
@@ -118,23 +123,24 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
         goto exit;
     }
     ctx->fmt_ctx = fmt_ctx;
+    ctx->url = strdup(url);
 
     if (ctx->codec_ctx_video) {
         fmt_ctx->oformat->video_codec = ctx->codec_ctx_video->codec_id;
-        //AVStream * stream = avformat_new_stream(fmt_ctx, ctx->codec_ctx_video->codec);
+//        AVStream * stream = avformat_new_stream(fmt_ctx, ctx->codec_ctx_video->codec);
         AVStream * stream = avformat_new_stream(fmt_ctx, nullptr);
         if (!stream) {
             LOGW("Failed to allocate output stream");
             goto exit;
         }
         stream->id = fmt_ctx->nb_streams - 1;
-        //stream->time_base = ctx->codec_ctx_video->time_base;
-        stream->time_base = (AVRational) { 1, 1000000 }; // pts in microseconds (10^-6)
+        stream->time_base = ctx->codec_ctx_video->time_base;
+        //stream->time_base = (AVRational) { 1, 1000000 }; // pts in microseconds (10^-6)
         stream->start_time = AV_NOPTS_VALUE;
 
         AVCodecParameters * params = stream->codecpar;
         avcodec_parameters_from_context(params, ctx->codec_ctx_video);
-        LOGD("AVCodecParameters codec_type:%d codec_id:%d codec_tag:%d profile:%d level:%d format:%d width:%d height:%d",
+        LOGD("AVCodecParameters codec_type:%d codec_id:%d codec_tag:%d profile:%d level:%d format:%d width:%d height:%d bit_rate:%ld",
              params->codec_type,
              params->codec_id,
              params->codec_tag,
@@ -142,7 +148,8 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
              params->level,
              params->format,
              params->width,
-             params->height);
+             params->height,
+             params->bit_rate);
 
         if (fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
             stream->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -152,22 +159,72 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
     }
     av_dump_format(fmt_ctx, 0, url, 1);
 
-    if (!(fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
-        if (avio_open2(&fmt_ctx->pb, url, AVIO_FLAG_WRITE, nullptr, nullptr) < 0) {
-            LOGW("Failed to open URL '%s'", url);
-            goto exit;
-        }
-    }
+//    if (!(fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
+//        int err = avio_open2(&fmt_ctx->pb, url, AVIO_FLAG_WRITE, nullptr, nullptr);
+//        if (err < 0) {
+//            char err_buf[1024];
+//            av_strerror(err, err_buf, sizeof(err_buf));
+//            LOGW("Failed to open '%s' - err:0x%08x(%s)", url, err, err_buf);
+//            goto exit;
+//        }
+//        LOGI("Open url <%s>", url);
+//    }
 
-    if (avformat_write_header(fmt_ctx, nullptr) < 0) {
-        LOGW("Failed to write header");
-        goto exit;
-    }
+//    if (avformat_write_header(fmt_ctx, nullptr) < 0) {
+//        LOGW("Failed to write header");
+//        goto exit;
+//    }
 
 exit:
     if (jurl) env->ReleaseStringUTFChars(jurl, url);
     LOGV("nativeOpen- fmt_ctx:%p", fmt_ctx);
     return true;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_rex_qly_FFmpeg_nativeSendVideoCodec(JNIEnv * env, jclass clazz,
+        jlong ptr, jobject jdata, jint offset, jint size)
+{
+    auto ctx = reinterpret_cast<context *>(ptr);
+    if (!ctx) return 0;
+    if (!ctx->stream_video) return 0;
+
+    auto data = (uint8_t *) env->GetDirectBufferAddress(jdata);
+    LOGV("nativeSendVideoCodec+ ctx:%p fmt_ctx:%p data:%p offset:%d size:%d", ctx, ctx->fmt_ctx, data, offset, size);
+
+#ifdef DUMP_H264_CODEC
+    dump_buffer(data + offset, (size_t) size, "Codec");
+#endif
+
+    auto extradata = (uint8_t *) av_malloc(size + AV_INPUT_BUFFER_PADDING_SIZE);
+    ::memcpy(extradata, data, size);
+
+    ctx->stream_video->codecpar->extradata = extradata;
+    ctx->stream_video->codecpar->extradata_size = size;
+//#ifdef DUMP_H264_CODEC
+//    dump_buffer(extradata, (size_t) size, "ExtraData");
+//#endif
+
+    if (!(ctx->fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
+        int err = avio_open2(&ctx->fmt_ctx->pb, ctx->url, AVIO_FLAG_WRITE, nullptr, nullptr);
+        if (err < 0) {
+            char err_buf[1024];
+            av_strerror(err, err_buf, sizeof(err_buf));
+            LOGW("Failed to open '%s' - err:0x%08x(%s)", ctx->url, err, err_buf);
+            goto exit;
+        }
+        LOGI("Open url <%s>", ctx->url);
+    }
+
+    if (avformat_write_header(ctx->fmt_ctx, nullptr) < 0) {
+        LOGW("Failed to write header");
+        goto exit;
+    }
+exit:
+
+    LOGV("nativeSendVideoCodec- size:%d", size);
+    return size;
 }
 
 extern "C"
@@ -180,31 +237,47 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
     if (!ctx->stream_video) return 0;
 
     auto data = (uint8_t *) env->GetDirectBufferAddress(jdata);
-    LOGV("nativeSendVideoData+ ctx:%p fmt_ctx:%p data:%p pts:%" PRId64 " offset:%d size:%d", ctx, ctx->fmt_ctx, data, pts, offset, size);
-
-//    int64_t calc_duration=(double)AV_TIME_BASE/av_q2d(ifmt_ctx->streams[videoindex]->r_frame_rate);
-//    //Parameters
-//    pkt.pts=(double)(frame_index*calc_duration)/(double)(av_q2d(time_base1)*AV_TIME_BASE);
+    //LOGV("nativeSendVideoData+ ctx:%p fmt_ctx:%p data:%p pts:%" PRId64 " offset:%d size:%d", ctx, ctx->fmt_ctx, data, pts, offset, size);
 
     AVPacket pkt;
     av_init_packet(&pkt);
     pkt.data = data + offset;
     pkt.size = size;
-    pkt.pts = pts; // presentationTimeUs is microseconds (10^-6)
+    //pkt.pts = AV_NOPTS_VALUE;
+    //pkt.pts = pts; // presentationTimeUs is microseconds (10^-6)
+    pkt.pts = av_rescale_q(pts, { 1, 1000000 }, ctx->stream_video->time_base); // presentationTimeUs is microseconds (10^-6), scale to stream time base
     pkt.dts = pkt.pts;
     pkt.stream_index = ctx->stream_video->index;
-    //pkt.duration = (ctx->stream_video->time_base.den) / ((ctx->stream_video->time_base.num) * ctx->codec_ctx_video->framerate.num); // FIXME: in AVStream->time_base units
-    pkt.duration = 0; // XXX: 0 if unknown
-#if (LOG_LEVEL <= LOG_LEVEL_VERBOSE)
-    dump_buffer(data + offset, (size_t) std::min(size, 128), "AnnexB");
+    pkt.duration = 0; // XXX: In AVStream->time_base units, 0 if unknown
+
+    // XXX: Not necessary
+    size_t pos = offset;
+    while (true) {
+        int type = nal_type(data + pos, size + offset - pos);
+        //LOGV("nativeSendVideoData pos:%zu type:%d(%s)", pos, type, nal_type_str(type));
+        switch (type) {
+            case H264_NAL_SEI:
+            case H264_NAL_PPS:
+            case H264_NAL_SPS:
+                pos += nal_parse(data + pos, size + offset - pos);
+                continue;
+            case H264_NAL_IDR_SLICE:
+                //LOGV("nativeSendVideoData AV_PKT_FLAG_KEY");
+                pkt.flags |= AV_PKT_FLAG_KEY;
+                break;
+        }
+        break;
+    }
+
+#ifdef DUMP_H264_DATA
+    dump_buffer(data + offset, (size_t) std::min(size, 64), "Data");
 #endif
 
-    //av_packet_rescale_ts(&pkt, );
     if (av_interleaved_write_frame(ctx->fmt_ctx, &pkt) < 0) {
         LOGW("Failed to write frame");
     }
 
-    LOGV("nativeSendVideoData- size:%d", size);
+    //LOGV("nativeSendVideoData- size:%d", size);
     return size;
 }
 
@@ -235,6 +308,7 @@ Java_com_rex_qly_FFmpeg_nativeRelease(JNIEnv* env, jclass clazz, jlong ptr)
     if (ctx->fmt_ctx) avformat_free_context(ctx->fmt_ctx);
     if (ctx->codec_ctx_video) avcodec_free_context(&ctx->codec_ctx_video);
     if (ctx->codec_ctx_audio) avcodec_free_context(&ctx->codec_ctx_audio);
+    if (ctx->url) free((void *) ctx->url);
     avformat_network_deinit();
     delete ctx;
 }

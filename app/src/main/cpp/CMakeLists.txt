@@ -12,6 +12,7 @@ target_link_libraries(rtmp_jni
 add_library(ffmpeg_jni SHARED
     debug.cpp
     ffmpeg_jni.cpp
+    nalu.cpp
 )
 target_link_libraries(ffmpeg_jni
     libavformat

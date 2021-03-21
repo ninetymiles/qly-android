@@ -42,7 +42,7 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
                 .put(sps)
                 .put(pps);
         buffer.rewind();
-        mFFmpeg.sendVideoData(buffer, 0, buffer.remaining(), 0);
+        mFFmpeg.sendVideoCodec(buffer, 0, buffer.remaining());
     }
 
     @Override

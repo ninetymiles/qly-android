@@ -372,6 +372,9 @@ public class AppService extends Service {
             mSurfaceRecorder.setOutputCallback(new OutputCallbackFFmpeg()
                     .initVideo(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y))
                     .open(mRtmpServerAddress));
+//            mSurfaceRecorder.setOutputCallback(new OutputCallbackMergeConfig(new OutputCallbackFFmpeg()
+//                    .initVideo(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y))
+//                    .open(mRtmpServerAddress)));
             mSurfaceRecorder.setSurfaceCallback(new SurfaceRecorder.SurfaceCallback() {
                 @Override
                 public void onSurface(Surface surface) {
