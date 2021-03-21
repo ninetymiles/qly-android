@@ -158,7 +158,7 @@ echo "LIBS: ${LIBS}"
     --enable-shared \
     --enable-static \
     --enable-avformat \
-    --enable-protocol=rtmp \
+    --enable-protocol=rtmp,file \
     --enable-parser=h264,aac \
     --enable-muxer=flv \
     --enable-pic \
