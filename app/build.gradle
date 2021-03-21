@@ -17,6 +17,7 @@ android {
         versionCode Integer.parseInt(([ 'git','rev-list','--count','HEAD'].execute().text).trim())
 
         buildConfigField 'String',  'DEFAULT_RTMP_SERVER_ADDRESS', '"rtmp://localhost:1935/live/1"'
+        //buildConfigField 'String',  'DEFAULT_RTMP_SERVER_ADDRESS', '"file:///mnt/sdcard/sample.flv"'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

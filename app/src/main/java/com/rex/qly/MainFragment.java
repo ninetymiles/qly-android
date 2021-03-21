@@ -1,10 +1,12 @@
 package com.rex.qly;
 
+import android.Manifest;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -17,6 +19,7 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -36,6 +39,8 @@ import java.util.Observer;
 public class MainFragment extends Fragment {
 
     private static final Logger sLogger = LoggerFactory.getLogger(MainFragment.class);
+
+    private static final int REQUEST_PERMISSIONS = 100;
 
     private AppServiceClient mServiceClient;
     private NetworkAddressDiscover mNetworkDiscover;
@@ -89,6 +94,11 @@ public class MainFragment extends Fragment {
                 }
             }
         });
+
+        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            sLogger.debug("Permission <{}> requesting", Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, REQUEST_PERMISSIONS);
+        }
     }
 
     @Override
@@ -112,6 +122,21 @@ public class MainFragment extends Fragment {
         super.onStop();
         sLogger.trace("");
         mNetworkDiscover.deleteObserver(mNetworkObserver);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        sLogger.trace("requestCode:{} permissions:{} results:{}", requestCode, permissions, results);
+
+        if (REQUEST_PERMISSIONS == requestCode) {
+            for (int i = 0; i < permissions.length; i++) {
+                sLogger.debug("Permission <{}> {}", permissions[i], PackageManager.PERMISSION_GRANTED == results[i] ? "GRANTED" : "DENIED");
+//                if (Manifest.permission.WRITE_EXTERNAL_STORAGE.equals(permissions[i])
+//                        && PackageManager.PERMISSION_GRANTED == results[i]) {
+//                }
+            }
+        }
     }
 
     private void postState(State newState) {
@@ -149,7 +174,7 @@ public class MainFragment extends Fragment {
         }
     }
 
-    private View.OnClickListener mOnClickListener = new View.OnClickListener() {
+    private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             sLogger.trace("mState:{}", mState);
@@ -177,7 +202,7 @@ public class MainFragment extends Fragment {
         }
     }
 
-    private Observer mNetworkObserver = new Observer() {
+    private final Observer mNetworkObserver = new Observer() {
         @Override
         public void update(Observable observable, Object data) {
             sLogger.trace("");
