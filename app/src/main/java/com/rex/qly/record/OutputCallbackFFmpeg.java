@@ -1,5 +1,7 @@
 package com.rex.qly.record;
 
+import android.os.SystemClock;
+
 import com.rex.qly.FFmpeg;
 
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
     private final Logger mLogger = LoggerFactory.getLogger(OutputCallbackFFmpeg.class);
 
     private final FFmpeg mFFmpeg;
+    private long mStartTimeUs; // Uptime in microseconds(10^-6)
 
     public OutputCallbackFFmpeg() {
         mLogger.trace("");
@@ -38,6 +41,9 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
     @Override
     public void onConfig(ByteBuffer sps, ByteBuffer pps) {
         mLogger.trace("sps:{} pps:{}", sps.remaining(), pps.remaining());
+        if (mStartTimeUs == 0) {
+            mStartTimeUs = SystemClock.uptimeMillis() * 1000;
+        }
         ByteBuffer buffer = ByteBuffer.allocateDirect(sps.remaining() + pps.remaining())
                 .put(sps)
                 .put(pps);
@@ -48,7 +54,9 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
     @Override
     public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
         mLogger.trace("offset:{} size:{} pts:{}", offset, size, pts);
-        mFFmpeg.sendVideoData(buffer, offset, size, pts); // pts is microseconds(10^-6)
+
+        long ptsUs = pts - mStartTimeUs;
+        mFFmpeg.sendVideoData(buffer, offset, size, ptsUs); // pts is microseconds(10^-6)
     }
 
     @Override
