@@ -31,7 +31,7 @@ import android.view.Surface;
 import androidx.annotation.Keep;
 
 import com.rex.qly.preference.Prefs;
-import com.rex.qly.record.OutputCallbackRtmp;
+import com.rex.qly.record.OutputCallbackFFmpeg;
 import com.rex.qly.record.SurfaceRecorder;
 import com.rex.qly.utils.AssetsHelper;
 
@@ -300,10 +300,10 @@ public class AppService extends Service {
         setServerState(State.STARTED);
 
         if (mRtmpEnabled) {
-            if (mProjectionResultCode == null && mProjectionResultData == null) {
-                requestMediaProjection();
-            } else {
+            if (mProjectionResultCode != null) {
                 doStartSession(mProjectionResultCode, mProjectionResultData);
+            } else {
+                requestMediaProjection();
             }
         }
 
@@ -368,7 +368,13 @@ public class AppService extends Service {
 
         if (mRtmpEnabled) {
             mSurfaceRecorder = new SurfaceRecorder();
-            mSurfaceRecorder.setOutputCallback(new OutputCallbackRtmp(mRtmpServerAddress));
+            //mSurfaceRecorder.setOutputCallback(new OutputCallbackRtmp(mRtmpServerAddress));
+            mSurfaceRecorder.setOutputCallback(new OutputCallbackFFmpeg()
+                    .initVideo(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y))
+                    .open(mRtmpServerAddress));
+//            mSurfaceRecorder.setOutputCallback(new OutputCallbackMergeConfig(new OutputCallbackFFmpeg()
+//                    .initVideo(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y))
+//                    .open(mRtmpServerAddress)));
             mSurfaceRecorder.setSurfaceCallback(new SurfaceRecorder.SurfaceCallback() {
                 @Override
                 public void onSurface(Surface surface) {
@@ -449,10 +455,10 @@ public class AppService extends Service {
             case "capture":
                 sLogger.trace("capture");
                 if (State.STARTED.equals(mState)) {
-                    if (mProjectionResultCode == null && mProjectionResultData == null) {
-                        requestMediaProjection();
-                    } else {
+                    if (mProjectionResultCode != null) {
                         doStartSession(mProjectionResultCode, mProjectionResultData);
+                    } else {
+                        requestMediaProjection();
                     }
                 }
                 break;

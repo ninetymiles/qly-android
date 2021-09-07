@@ -20,8 +20,8 @@ public class OutputCallbackRtmp implements SurfaceRecorder.OutputCallback {
     }
 
     @Override
-    public void onFormat(int width, int height) {
-        mLogger.trace("width:{} height:{}", width, height);
+    public void onFormat(int width, int height, int fps, int bps) {
+        mLogger.trace("width:{} height:{} fps:{} bps:{}", width, height, fps, bps);
     }
 
     @Override

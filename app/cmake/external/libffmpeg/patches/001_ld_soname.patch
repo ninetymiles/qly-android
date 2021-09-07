@@ -1,0 +1,15 @@
+--- ffmpeg-4.3.1-old/configure	2020-10-06 13:53:09.000000000 +0800
++++ ffmpeg-4.3.1-new/configure	2020-10-06 14:28:11.000000000 +0800
+@@ -5300,10 +5300,10 @@
+         disable symver
+         enable section_data_rel_ro
+         add_cflags -fPIE
+-        add_ldexeflags -fPIE -pie
++        add_ldexeflags -pie
+         SLIB_INSTALL_NAME='$(SLIBNAME)'
+         SLIB_INSTALL_LINKS=
+-        SHFLAGS='-shared -Wl,-soname,$(SLIBNAME)'
++        SHFLAGS='-shared -soname $(SLIBNAME)'
+         ;;
+     haiku)
+         prefix_default="/boot/common"

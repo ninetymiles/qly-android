@@ -1,0 +1,5 @@
+build
+
+cmake/external/*/*.tar.gz
+cmake/external/*/prebuilt
+

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 
 // Merge SPS & PPS into IDR frame
+// But still leave config data there
 public class OutputCallbackMergeConfig extends SurfaceRecorder.OutputCallbackWrapper {
 
     private final Logger mLogger = LoggerFactory.getLogger(OutputCallbackMergeConfig.class);
@@ -21,6 +22,8 @@ public class OutputCallbackMergeConfig extends SurfaceRecorder.OutputCallbackWra
     @Override
     public void onConfig(ByteBuffer sps, ByteBuffer pps) {
         super.onConfig(sps, pps);
+        sps.rewind();
+        pps.rewind();
         mLogger.trace("sps:{} pps:{}", sps.remaining(), pps.remaining());
         if (!sps.isDirect()) {
             sps = ByteBuffer.allocateDirect(sps.remaining()).put(sps);
