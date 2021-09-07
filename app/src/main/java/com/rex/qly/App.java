@@ -2,7 +2,6 @@ package com.rex.qly;
 
 import android.app.Application;
 import android.content.Context;
-import android.os.Build;
 import android.os.StrictMode;
 
 import androidx.multidex.MultiDex;
@@ -29,7 +28,7 @@ public class App extends Application {
     public void onCreate() {
         super.onCreate();
 
-        if (BuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+        if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
                     //.detectAll()
                     .detectNetwork()
@@ -50,12 +49,12 @@ public class App extends Application {
             Logger rootLogger = ctx.getLogger(Logger.ROOT_LOGGER_NAME);
             rootLogger.setLevel(Level.INFO);
 
-            RollingFileAppender<ILoggingEvent> rollingFileAppender = new RollingFileAppender<ILoggingEvent>();
+            RollingFileAppender<ILoggingEvent> rollingFileAppender = new RollingFileAppender<>();
             rollingFileAppender.setContext(ctx);
             rollingFileAppender.setAppend(true);
             rollingFileAppender.setFile("/mnt/sdcard/rex/qly.log");
 
-            TimeBasedRollingPolicy<ILoggingEvent> rollingPolicy = new TimeBasedRollingPolicy<ILoggingEvent>();
+            TimeBasedRollingPolicy<ILoggingEvent> rollingPolicy = new TimeBasedRollingPolicy<>();
             rollingPolicy.setContext(ctx);
             rollingPolicy.setFileNamePattern("/mnt/sdcard/rex/qly.%d{yyyy-MM-dd}.log");
             rollingPolicy.setMaxHistory(6);

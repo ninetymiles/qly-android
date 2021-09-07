@@ -100,7 +100,7 @@ public class AppService extends Service {
     private SimpleWebServer mHttpServer;
     private WsServer mWsServer;
 
-    private LocalBinder mLocalBinder = new LocalBinder();
+    private final LocalBinder mLocalBinder = new LocalBinder();
 
     public class LocalBinder extends Binder {
         public AppService getService() {
@@ -602,7 +602,7 @@ public class AppService extends Service {
         }
     }
 
-    private ImageReader.OnImageAvailableListener mImageSendListener = new ImageReader.OnImageAvailableListener() {
+    private final ImageReader.OnImageAvailableListener mImageSendListener = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader reader) {
             //sLogger.trace("send width:{} height:{}", reader.getWidth(), reader.getHeight());
@@ -623,23 +623,17 @@ public class AppService extends Service {
 
             mWsServer.sendFrame(bos.toByteArray());
 
-            if (image != null) {
-                image.close();
-            }
-            if (bitmap != null) {
-                bitmap.recycle();
-            }
+            image.close();
+            bitmap.recycle();
             try {
-                if (bos != null) {
-                    bos.close();
-                }
+                bos.close();
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }
     };
 
-    private ImageReader.OnImageAvailableListener mImageExportListener = new ImageReader.OnImageAvailableListener() {
+    private final ImageReader.OnImageAvailableListener mImageExportListener = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader reader) {
             //sLogger.trace("export width:{} height:{}", reader.getWidth(), reader.getHeight());

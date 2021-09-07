@@ -20,14 +20,14 @@ import java.util.concurrent.TimeUnit;
  */
 public class NetworkAddressDiscover extends Observable {
 
-    private static final Logger mLogger = LoggerFactory.getLogger(NetworkAddressDiscover.class);
+    private static final Logger sLogger = LoggerFactory.getLogger(NetworkAddressDiscover.class);
 
     private static final int INTERVAL = 15; // In seconds
 
     private ScheduledExecutorService mExecutor;
 
     private boolean mIsStarted;
-    private List<InetAddress> mAddrList = new ArrayList<InetAddress>();
+    private List<InetAddress> mAddrList = new ArrayList<>();
 
     private static NetworkAddressDiscover mInstance;
 
@@ -43,7 +43,7 @@ public class NetworkAddressDiscover extends Observable {
 
     public void start() {
         if (mIsStarted) {
-            mLogger.warn("Already started");
+            sLogger.warn("Already started");
             return;
         }
 
@@ -54,7 +54,7 @@ public class NetworkAddressDiscover extends Observable {
 
     public synchronized void stop() {
         if (! mIsStarted) {
-            mLogger.warn("Already stopped");
+            sLogger.warn("Already stopped");
             return;
         }
 
@@ -74,7 +74,7 @@ public class NetworkAddressDiscover extends Observable {
         observer.update(this, mAddrList);
     }
 
-    private Runnable mRunnable = new Runnable() {
+    private final Runnable mRunnable = new Runnable() {
         @Override
         public void run() {
             //mLogger.trace("+");
@@ -91,7 +91,7 @@ public class NetworkAddressDiscover extends Observable {
                     }
                 }
             } catch (SocketException ex) {
-                mLogger.error("Failed to get Interface or Address", ex);
+                sLogger.error("Failed to get Interface or Address", ex);
             }
 
             try {
@@ -100,7 +100,7 @@ public class NetworkAddressDiscover extends Observable {
                 mAddrList = result;
                 notifyObservers(mAddrList);
             } catch (Exception ex) {
-                mLogger.warn("Failed to notify - {}", ex.getMessage());
+                sLogger.warn("Failed to notify - {}", ex.getMessage());
             }
             //mLogger.trace("-");
         }

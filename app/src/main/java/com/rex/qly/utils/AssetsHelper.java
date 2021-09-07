@@ -14,7 +14,7 @@ import java.util.zip.ZipFile;
 
 public class AssetsHelper {
 
-    private Context mContext;
+    private final Context mContext;
 
     public AssetsHelper(Context context) {
         mContext = context;

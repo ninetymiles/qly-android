@@ -159,6 +159,7 @@ public class MainFragment extends Fragment {
             mImageStatus.setImageResource(R.drawable.ic_success_24dp);
             break;
         case STARTING:
+        case STOPPING:
             mButton.setEnabled(false);
             mImageStatus.setImageResource(R.drawable.ic_process_24dp);
             break;
@@ -166,10 +167,6 @@ public class MainFragment extends Fragment {
             mButton.setEnabled(true);
             mButton.setText(R.string.button_start);
             mImageStatus.setImageResource(R.drawable.ic_failed_24dp);
-            break;
-        case STOPPING:
-            mButton.setEnabled(false);
-            mImageStatus.setImageResource(R.drawable.ic_process_24dp);
             break;
         }
     }
