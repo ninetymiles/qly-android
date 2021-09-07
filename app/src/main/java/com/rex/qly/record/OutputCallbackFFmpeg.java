@@ -41,9 +41,6 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
     @Override
     public void onConfig(ByteBuffer sps, ByteBuffer pps) {
         mLogger.trace("sps:{} pps:{}", sps.remaining(), pps.remaining());
-        if (mStartTimeUs == 0) {
-            mStartTimeUs = SystemClock.uptimeMillis() * 1000;
-        }
         ByteBuffer buffer = ByteBuffer.allocateDirect(sps.remaining() + pps.remaining())
                 .put(sps)
                 .put(pps);
@@ -55,6 +52,9 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
     public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
         mLogger.trace("offset:{} size:{} pts:{}", offset, size, pts);
 
+        if (mStartTimeUs == 0) {
+            mStartTimeUs = pts;
+        }
         long ptsUs = pts - mStartTimeUs;
         mFFmpeg.sendVideoData(buffer, offset, size, ptsUs); // pts is microseconds(10^-6)
     }
