@@ -112,8 +112,8 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
     const char * url = env->GetStringUTFChars(jurl, nullptr);
     LOGV("nativeOpen+ ctx:%p url:<%s>", ctx, url);
 
-//    int64_t ts = av_gettime_relative(); // same time as pts
-//    AVRational tb = av_get_time_base_q();
+//    int64_t ts = av_gettime_relative();   // uptime in microsecond, same timebase as pts
+//    AVRational tb = av_get_time_base_q(); // 1/1000000
 //    LOGV("nativeOpen ts:%" PRId64 " tb:%d/%d", ts, tb.num, tb.den);
 
     AVFormatContext * fmt_ctx = nullptr;
@@ -134,9 +134,9 @@ Java_com_rex_qly_FFmpeg_nativeOpen(JNIEnv* env, jclass clazz, jlong ptr, jstring
             goto exit;
         }
         stream->id = fmt_ctx->nb_streams - 1;
-        stream->time_base = ctx->codec_ctx_video->time_base;
-        //stream->time_base = (AVRational) { 1, 1000000 }; // pts in microseconds (10^-6)
-        stream->start_time = AV_NOPTS_VALUE;
+        //stream->time_base = ctx->codec_ctx_video->time_base; // 1/fps
+        stream->time_base = (AVRational) { 1, 1000000 }; // pts in microseconds (10^-6)
+        stream->avg_frame_rate = ctx->codec_ctx_video->framerate;
 
         AVCodecParameters * params = stream->codecpar;
         avcodec_parameters_from_context(params, ctx->codec_ctx_video);
@@ -202,9 +202,6 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoCodec(JNIEnv * env, jclass clazz,
 
     ctx->stream_video->codecpar->extradata = extradata;
     ctx->stream_video->codecpar->extradata_size = size;
-//#ifdef DUMP_H264_CODEC
-//    dump_buffer(extradata, (size_t) size, "ExtraData");
-//#endif
 
     if (!(ctx->fmt_ctx->oformat->flags & AVFMT_NOFILE)) {
         int err = avio_open2(&ctx->fmt_ctx->pb, ctx->url, AVIO_FLAG_WRITE, nullptr, nullptr);
@@ -249,6 +246,10 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
     pkt.dts = pkt.pts;
     pkt.stream_index = ctx->stream_video->index;
     pkt.duration = 0; // XXX: In AVStream->time_base units, 0 if unknown
+    LOGV("nativeSendVideoData pts:%" PRId64 " pkt.pts:%" PRId64 "(%.3f) pkt.dts:%" PRId64 "(%.3f)",
+         pts,
+         pkt.pts, av_q2d(ctx->stream_video->time_base) * pkt.pts,
+         pkt.dts, av_q2d(ctx->stream_video->time_base) * pkt.dts);
 
     // XXX: Not necessary
     size_t pos = offset;
@@ -256,15 +257,17 @@ Java_com_rex_qly_FFmpeg_nativeSendVideoData(JNIEnv * env, jclass clazz,
         int type = nal_type(data + pos, size + offset - pos);
         //LOGV("nativeSendVideoData pos:%zu type:%d(%s)", pos, type, nal_type_str(type));
         switch (type) {
-            case H264_NAL_SEI:
-            case H264_NAL_PPS:
-            case H264_NAL_SPS:
-                pos += nal_parse(data + pos, size + offset - pos);
-                continue;
-            case H264_NAL_IDR_SLICE:
-                //LOGV("nativeSendVideoData AV_PKT_FLAG_KEY");
-                pkt.flags |= AV_PKT_FLAG_KEY;
-                break;
+        case H264_NAL_SEI:
+        case H264_NAL_PPS:
+        case H264_NAL_SPS:
+            pos += nal_parse(data + pos, size + offset - pos);
+            continue;
+        case H264_NAL_IDR_SLICE:
+            //LOGV("nativeSendVideoData AV_PKT_FLAG_KEY");
+            pkt.flags |= AV_PKT_FLAG_KEY;
+            break;
+        default:
+            break;
         }
         break;
     }
