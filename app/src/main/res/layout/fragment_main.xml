@@ -53,6 +53,14 @@
 
     </FrameLayout>
 
+    <TextView
+        android:id="@+id/main_duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:text="00:00:00"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="1dp"

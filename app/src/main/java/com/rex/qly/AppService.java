@@ -23,6 +23,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Surface;
 
@@ -74,10 +76,11 @@ public class AppService extends Service {
 
     public enum State { STARTING, STARTED, STOPPING, STOPPED }
     private State mState = State.STOPPED;
+    private long mStartTime;
 
     private final AppNotifier mNotifier = new AppNotifier();
 
-    private final ArrayList<ServerListener> mServerListeners = new ArrayList<ServerListener>();
+    private final ArrayList<ServerListener> mServerListeners = new ArrayList<>();
     private volatile Handler mHandler;
 
     private int mOrientation = Configuration.ORIENTATION_UNDEFINED;
@@ -371,7 +374,7 @@ public class AppService extends Service {
                 public void onSurface(Surface surface) {
                     //mSurface = surface; // SurfaceRecorder.stop() will auto release the surface, do not need keep a reference for handleSessionStopCommand()
                     mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
-                            captureSize.x, captureSize.y, 213, // TV-DPI
+                            captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH,
                             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                             surface,
                             mVirtualDisplayCallback,
@@ -385,13 +388,14 @@ public class AppService extends Service {
             mSurface = mImageReader.getSurface();
             if (mDisplay == null) {
                 mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
-                        captureSize.x, captureSize.y, 213, // TV-DPI
+                        captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH,
                         DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                         mSurface,
                         mVirtualDisplayCallback,
                         mHandler);
             }
         }
+        mStartTime = SystemClock.uptimeMillis();
 
         mNotifier.onSessionStart();
 
@@ -408,6 +412,7 @@ public class AppService extends Service {
             mWakeLock.release();
             mWakeLock = null;
         }
+        mStartTime = 0;
 
         if (mSurfaceRecorder != null) {
             mSurfaceRecorder.stop();
@@ -507,6 +512,10 @@ public class AppService extends Service {
         sLogger.trace("");
         mHandler.removeMessages(MSG_SERVER_STOP);
         mHandler.obtainMessage(MSG_SERVER_STOP).sendToTarget();
+    }
+
+    public long getSessionDuration() {
+        return (mStartTime != 0) ? SystemClock.uptimeMillis() - mStartTime: 0;
     }
 
     private void doStartSession(int resultCode, Intent resultData) {

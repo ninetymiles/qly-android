@@ -9,12 +9,14 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -33,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -51,7 +54,9 @@ public class MainFragment extends Fragment {
     private State mState = State.STOPPED;
 
     private ImageView mImageStatus;
+    private TextView mTextDuration;
     private Button mButton;
+    private Handler mHandler;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -70,6 +75,9 @@ public class MainFragment extends Fragment {
         recyclerView.setAdapter(mAddrAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
+        mTextDuration = view.findViewById(R.id.main_duration);
+        mTextDuration.setVisibility(View.GONE);
+
         mButton = view.findViewById(R.id.main_button);
         mButton.setOnClickListener(mOnClickListener);
         invalidateUIState();
@@ -79,6 +87,7 @@ public class MainFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         sLogger.trace("");
+        mHandler = new Handler();
         mNetworkDiscover = NetworkAddressDiscover.getInstance();
         mNetworkDiscover.start();
         mServiceClient = new AppServiceClient(getContext());
@@ -157,6 +166,8 @@ public class MainFragment extends Fragment {
             mButton.setEnabled(true);
             mButton.setText(R.string.button_stop);
             mImageStatus.setImageResource(R.drawable.ic_success_24dp);
+            mTextDuration.setVisibility(View.VISIBLE);
+            mHandler.post(mUpdateDurationRunnable);
             break;
         case STARTING:
         case STOPPING:
@@ -167,9 +178,34 @@ public class MainFragment extends Fragment {
             mButton.setEnabled(true);
             mButton.setText(R.string.button_start);
             mImageStatus.setImageResource(R.drawable.ic_failed_24dp);
+            mTextDuration.setVisibility(View.GONE);
+            mHandler.removeCallbacks(mUpdateDurationRunnable);
             break;
         }
     }
+
+    private final Runnable mUpdateDurationRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mHandler.removeCallbacks(mUpdateDurationRunnable);
+            sLogger.trace("UpdateDuration");
+
+            long duration = mServiceClient.getDuration();
+            String durationText = "00:00:00";
+            if (duration > 0) {
+                long duration_secs = (duration + 500) / 1000; // Round up, 0.5 for 1, 0.4 for 0
+                long hour = duration_secs / 3600;
+                long min = duration_secs / 60 % 60;
+                long sec = duration_secs % 60;
+                //sLogger.trace("duration:{} duration_secs:{} hour:{} min:{} sec:{}", duration, duration_secs, hour, min, sec);
+                durationText = String.format(Locale.US, "%02d:%02d:%02d", hour, min, sec);
+            }
+            mTextDuration.setText(durationText);
+            if (mState == State.STARTED) {
+                mHandler.postDelayed(mUpdateDurationRunnable, 1000);
+            }
+        }
+    };
 
     private final View.OnClickListener mOnClickListener = new View.OnClickListener() {
         @Override
@@ -267,6 +303,9 @@ public class MainFragment extends Fragment {
                 mAppService.doStopServer();
                 mPendingStop = false;
             }
+        }
+        public long getDuration() {
+            return (mAppService != null) ? mAppService.getSessionDuration() : 0;
         }
 
         @Override // ServiceConnection
