@@ -142,7 +142,7 @@ public class SurfaceRecorder {
                         } else {
                             // FIXME: Some device may auto include SPS and PPS in IDR frame, need remove it manually
                             // FIXME: Convert Annex-B to Avcc, avoid mixing with SEI frame still contain csd
-                            mLogger.info("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
+                            //mLogger.debug("Got {} - {}", (((info.flags & MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) ? "KEY_FRAME" : "FRAME"), outBuffer.remaining());
                             //mLogger.debug("<{}>", Debug.dumpByteBuffer(outBuffer, info.offset, Math.min(info.size, 64)));
                             if (mOutputCallback != null) {
                                 mOutputCallback.onFrame(outBuffer, info.offset, info.size, info.presentationTimeUs);
