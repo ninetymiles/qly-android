@@ -50,8 +50,7 @@ public class OutputCallbackFFmpeg implements SurfaceRecorder.OutputCallback {
 
     @Override
     public void onFrame(ByteBuffer buffer, int offset, int size, long pts) {
-        mLogger.trace("offset:{} size:{} pts:{}", offset, size, pts);
-
+        //mLogger.trace("offset:{} size:{} pts:{}", offset, size, pts);
         if (mStartTimeUs == 0) {
             mStartTimeUs = pts;
         }

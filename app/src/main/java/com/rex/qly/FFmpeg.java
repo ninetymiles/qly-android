@@ -54,7 +54,7 @@ public class FFmpeg implements Closeable {
     }
 
     public boolean sendVideoData(ByteBuffer data, int offset, int size, long pts) {
-        mLogger.trace("this:{} offset:{} size:{} pts:{}", hashCode(), offset, size, pts);
+        //mLogger.trace("this:{} offset:{} size:{} pts:{}", hashCode(), offset, size, pts);
         return (mNativePtr != 0 && nativeSendVideoData(mNativePtr, data, offset, size, pts) > 0);
     }
 

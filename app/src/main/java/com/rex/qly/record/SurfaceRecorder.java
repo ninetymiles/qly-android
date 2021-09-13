@@ -126,7 +126,7 @@ public class SurfaceRecorder {
                 }
                 @Override
                 public void onOutputBufferAvailable(@NonNull MediaCodec codec, int index, @NonNull MediaCodec.BufferInfo info) {
-                    mLogger.trace("index:{} flags:{} offset:{} size:{} presentationTimeUs:{}", index, info.flags, info.offset, info.size, info.presentationTimeUs);
+                    //mLogger.trace("index:{} flags:{} offset:{} size:{} presentationTimeUs:{}", index, info.flags, info.offset, info.size, info.presentationTimeUs);
                     ByteBuffer outBuffer = codec.getOutputBuffer(index); // DirectByteBuffer
                     if (outBuffer != null) {
                         outBuffer.position(info.offset);

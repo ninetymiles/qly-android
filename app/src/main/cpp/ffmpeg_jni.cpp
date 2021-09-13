@@ -1,5 +1,5 @@
 #define LOG_TAG     "libffmpegjni"
-#define LOG_LEVEL   LOG_LEVEL_ALL
+//#define LOG_LEVEL   LOG_LEVEL_ALL
 
 #include <algorithm>
 #include <cinttypes>
