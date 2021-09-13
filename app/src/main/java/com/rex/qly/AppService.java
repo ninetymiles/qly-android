@@ -94,7 +94,6 @@ public class AppService extends Service {
 
     private VirtualDisplay mDisplay;
     private ImageReader mImageReader;
-    private Surface mSurface;
 
     private boolean mRtmpEnabled;
     private String mRtmpServerAddress;
@@ -378,25 +377,26 @@ public class AppService extends Service {
             mSurfaceRecorder.setSurfaceCallback(new SurfaceRecorder.SurfaceCallback() {
                 @Override
                 public void onSurface(Surface surface) {
-                    //mSurface = surface; // SurfaceRecorder.stop() will auto release the surface, do not need keep a reference for handleSessionStopCommand()
-                    mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
-                            captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                            surface,
-                            mVirtualDisplayCallback,
-                            mHandler);
+                    sLogger.trace("surface:{}", surface);
+                    if (mDisplay == null && surface != null) {
+                        mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
+                                captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH,
+                                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                                surface,
+                                mVirtualDisplayCallback,
+                                mHandler);
+                    }
                 }
             });
             mSurfaceRecorder.start(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y));
         } else {
             mImageReader = ImageReader.newInstance(captureSize.x, captureSize.y, PixelFormat.RGBA_8888, MAX_NUM_IMAGES);
             mImageReader.setOnImageAvailableListener(mImageSendListener, mHandler);
-            mSurface = mImageReader.getSurface();
             if (mDisplay == null) {
                 mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
                         captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH,
                         DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                        mSurface,
+                        mImageReader.getSurface(),
                         mVirtualDisplayCallback,
                         mHandler);
             }
@@ -432,9 +432,6 @@ public class AppService extends Service {
         if (mProjection != null) {
             mProjection.stop();
             mProjection = null;
-        }
-        if (mSurface != null) {
-            mSurface.release();
         }
         if (mImageReader != null) {
             mImageReader.close();
@@ -489,14 +486,14 @@ public class AppService extends Service {
         if (mRtmpEnabled) {
             mSurfaceRecorder.stop();
             mSurfaceRecorder.start(captureSize.x, captureSize.y, 30, bitRate(captureSize.x, captureSize.y));
+            // Will auto re-create the display and attach new surface
         } else {
-            mSurface.release();
             //mImageReader.close(); // FIXME: Close here will got "dequeueBuffer: BufferQueue has been abandoned"
             mImageReader = ImageReader.newInstance(captureSize.x, captureSize.y, PixelFormat.RGBA_8888, MAX_NUM_IMAGES);
             mImageReader.setOnImageAvailableListener(mImageSendListener, mHandler);
+            mDisplay.setSurface(mImageReader.getSurface());
         }
-        mDisplay.resize(captureSize.x, captureSize.y, 213);
-        mDisplay.setSurface(mImageReader.getSurface());
+        mDisplay.resize(captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH);
         return true;
     }
 
@@ -549,7 +546,7 @@ public class AppService extends Service {
     }
 
     private Point scaleSize(int width, int height, int maxWidth, int maxHeight) {
-        if (maxWidth > width && maxHeight > height) {
+        if ((maxWidth == 0 && maxHeight == 0) || (maxWidth > width && maxHeight > height)) {
             // Not over the limitation, use specified resolution directly
         } else {
             // Scale down resolution has same ratio with Main Display resolution
