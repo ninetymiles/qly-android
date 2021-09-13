@@ -13,6 +13,7 @@ import java.util.UUID;
 public class Prefs {
 
     // For video resolution
+    public static final int RESOLUTION_RAW      = -1;
     public static final int RESOLUTION_720P     = 0;
     public static final int RESOLUTION_1080P    = 1;
     public static final int RESOLUTION_4K       = 2;
@@ -35,6 +36,8 @@ public class Prefs {
 
     public Point getVideoResolutionPoint(int index) {
         switch (index) {
+        case RESOLUTION_RAW:
+            return new Point(0, 0);
         case RESOLUTION_4K:
             return new Point(3840, 2160);
         case RESOLUTION_1080P:
