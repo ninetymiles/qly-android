@@ -188,7 +188,7 @@ public class MainFragment extends Fragment {
         @Override
         public void run() {
             mHandler.removeCallbacks(mUpdateDurationRunnable);
-            sLogger.trace("UpdateDuration");
+            //sLogger.trace("UpdateDuration"); // Too noisy
 
             long duration = mServiceClient.getDuration();
             String durationText = "00:00:00";
