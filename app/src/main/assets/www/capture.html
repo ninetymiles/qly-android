@@ -43,6 +43,8 @@
 var cavs; // Canvas jQuery object
 var ws;   // Websocket object
 var timer;// Websocket heartbeat timer
+var imgWidth;   // Image actual width
+var imgHeight;  // Image actual height
 $(function() {
     cavs = $("#canvas");
     var canvas = cavs.get(0); // DOM object
@@ -81,6 +83,14 @@ $(function() {
         if (ev.data instanceof Blob) {
             //console.log("onmessage ev:" + ev.data + " size:" + ev.data.size);
             drawImage(ev.data);
+        } else {
+            //console.log("onmessage ev:" + ev + " data:" + ev.data);
+            var json = $.parseJSON(ev.data);
+            if (json.type == "format") {
+                imgWidth  = json.data.width;
+                imgHeight = json.data.height;
+                console.log("onmessage format width:" + imgWidth + " height:" + imgHeight);
+            }
         }
     }
 });
@@ -90,18 +100,20 @@ function drawImage(blob) {
     var img = new Image();
     img.onload = function() {
         //console.log("onload image width:" + img.width + " height:" + img.height);
+        var cw = (imgWidth > 0) ? imgWidth : img.width;
+        var ch = (imgHeight > 0) ? imgHeight : img.height;
 
         cavs.clearCanvas();
         var canvas = cavs.get(0);
         //console.log("onload canvas width:" + canvas.width + " height:" + canvas.height);
 
-        var scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-        var w = img.width * scale;
-        var h = img.height * scale;
+        var scale = Math.min(canvas.width / cw, canvas.height / ch);
+        var w = cw * scale;
+        var h = ch * scale;
         var x = (canvas.width - w) / 2;
         var y = (canvas.height - h) / 2;
         //console.log("onload scale:" + scale + " w:" + w + " h:" + h + " x:" + x + " y:" + y);
-        canvas.getContext("2d").drawImage(img, x, y, w, h);
+        canvas.getContext("2d").drawImage(img, 0, 0, cw, ch, x, y, w, h);
     }
     img.src = URL.createObjectURL(blob);
 }
@@ -109,6 +121,8 @@ function doRelease() {
     $("#panel").show();
     clearInterval(timer);
     ws = null;
+    imgWidth = 0;
+    imgHeight = 0;
 }
 function onTimer() {
     if (ws != null) {
