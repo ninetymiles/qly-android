@@ -379,7 +379,7 @@ public class AppService extends Service {
                 public void onSurface(Surface surface) {
                     sLogger.trace("surface:{}", surface);
                     if (mDisplay == null && surface != null) {
-                        mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
+                        mDisplay = mProjection.createVirtualDisplay("QLY",
                                 captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH,
                                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                                 surface,
@@ -393,7 +393,7 @@ public class AppService extends Service {
             mImageReader = ImageReader.newInstance(captureSize.x, captureSize.y, PixelFormat.RGBA_8888, MAX_NUM_IMAGES);
             mImageReader.setOnImageAvailableListener(mImageSendListener, mHandler);
             if (mDisplay == null) {
-                mDisplay = mProjection.createVirtualDisplay("VirtualDisplay",
+                mDisplay = mProjection.createVirtualDisplay("QLY",
                         captureSize.x, captureSize.y, DisplayMetrics.DENSITY_HIGH,
                         DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                         mImageReader.getSurface(),
@@ -615,9 +615,27 @@ public class AppService extends Service {
     }
 
     private final ImageReader.OnImageAvailableListener mImageSendListener = new ImageReader.OnImageAvailableListener() {
+        private int mWidth;
+        private int mHeight;
         @Override
         public void onImageAvailable(ImageReader reader) {
             //sLogger.trace("send width:{} height:{}", reader.getWidth(), reader.getHeight());
+            if (mWidth != reader.getWidth() || mHeight != reader.getHeight()) {
+                mWidth  = reader.getWidth();
+                mHeight = reader.getHeight();
+                try {
+                    JSONObject data = new JSONObject();
+                    data.put("width", mWidth);
+                    data.put("height", mHeight);
+                    JSONObject json = new JSONObject();
+                    json.put("type", "format");
+                    json.put("data", data);
+                    mWsServer.sendMessage(json.toString());
+                } catch (JSONException ex) {
+                    sLogger.warn("Failed to generate format json - {}", ex.getMessage());
+                }
+            }
+
             ByteArrayOutputStream bos = new ByteArrayOutputStream(32768);
             Image image = mImageReader.acquireLatestImage();
             if (image == null) {
@@ -628,6 +646,8 @@ public class AppService extends Service {
             int pixelStride = plane.getPixelStride();
             int rowStride = plane.getRowStride();
             int rowPadding = rowStride - pixelStride * reader.getWidth();
+            //sLogger.trace("pixelStride:{} rowStride:{} rowPadding:{}", pixelStride, rowStride, rowPadding);
+            //sLogger.trace("bitmap width:{} height:{}", reader.getWidth() + rowPadding / pixelStride, reader.getHeight());
 
             Bitmap bitmap = Bitmap.createBitmap(reader.getWidth() + rowPadding / pixelStride, reader.getHeight(), Bitmap.Config.ARGB_8888);
             bitmap.copyPixelsFromBuffer(buffer);
