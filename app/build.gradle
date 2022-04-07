@@ -14,7 +14,7 @@ android {
         targetSdkVersion 29
 
         versionName project.version
-        versionCode Integer.parseInt(([ 'git','rev-list','--count','HEAD'].execute().text).trim())
+        versionCode Integer.parseInt(([ 'git','-C',projectDir.toString(),'rev-list','--count','HEAD'].execute().text).trim())
 
         buildConfigField 'String',  'DEFAULT_RTMP_SERVER_ADDRESS', '"rtmp://localhost:1935/live/1"'
         //buildConfigField 'String',  'DEFAULT_RTMP_SERVER_ADDRESS', '"file:///mnt/sdcard/sample.flv"'
