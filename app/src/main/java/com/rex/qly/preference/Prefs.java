@@ -49,11 +49,15 @@ public class Prefs {
     }
 
     public String getUniqueId() {
-        String uniqueId = null;
-        String androidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
-        if (androidId != null) {
+        String key = mContext.getString(R.string.prefs_unique_id_key);
+        String uniqueId = mPrefs.getString(key, null);
+        if (uniqueId == null) {
+            String androidId = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
             uniqueId = UUID.nameUUIDFromBytes(androidId.getBytes()).toString();
+            mPrefs.edit()
+                    .putString(key, uniqueId)
+                    .apply();
         }
-        return mPrefs.getString(mContext.getString(R.string.prefs_unique_id_key), uniqueId);
+        return uniqueId;
     }
 }
