@@ -1,17 +1,16 @@
 apply plugin: 'com.android.application'
 apply plugin: 'maven-publish'
 
-version '0.9.0-SNAPSHOT'
+version = '0.9.0-SNAPSHOT'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    compileSdkVersion 32
 
     defaultConfig {
         applicationId "com.rex.qly"
 
         minSdkVersion 21
-        targetSdkVersion 29
+        targetSdkVersion 32
 
         versionName project.version
         versionCode Integer.parseInt(([ 'git','-C',projectDir.toString(),'rev-list','--count','HEAD'].execute().text).trim())
@@ -36,15 +35,15 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
-    compileOptions {
-        targetCompatibility JavaVersion.VERSION_1_8
-        sourceCompatibility JavaVersion.VERSION_1_8
-    }
+    //compileOptions {
+    //    targetCompatibility JavaVersion.VERSION_1_8
+    //    sourceCompatibility JavaVersion.VERSION_1_8
+    //}
 
     lintOptions {
         checkReleaseBuilds false
@@ -71,11 +70,11 @@ dependencies {
     implementation 'androidx.navigation:navigation-fragment:2.3.5'
     implementation 'androidx.navigation:navigation-ui:2.3.5'
     implementation 'androidx.preference:preference:1.1.1'
-    implementation 'androidx.recyclerview:recyclerview:1.2.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
 
     implementation 'com.google.android.material:material:1.3.0'
 
-    implementation 'org.slf4j:slf4j-api:1.7.30'
+    implementation 'org.slf4j:slf4j-api:1.7.32'
     implementation 'com.github.tony19:logback-android:2.0.0'
 
     implementation 'org.nanohttpd:nanohttpd-webserver:2.3.1'
@@ -87,9 +86,9 @@ dependencies {
     //testImplementation 'org.robolectric:robolectric:4.3.1'
 
     // Print log stdout for junit test
-    testImplementation 'ch.qos.logback:logback-classic:1.2.3'
+    testImplementation 'ch.qos.logback:logback-classic:1.2.6'
 
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
     // Print log stdout for androidTest
@@ -99,65 +98,6 @@ dependencies {
     //androidTestImplementation 'androidx.test:rules:1.2.0'
     //androidTestImplementation 'org.mockito:mockito-android:3.3.3'
     //androidTestImplementation 'org.opentest4j:opentest4j:1.2.0' // mockito-android required
-}
-
-afterEvaluate {
-    android.applicationVariants.all { variant ->
-        //println("variant.name:" + variant.name)
-        //println("variant.baseName:" + variant.baseName)
-        //println("variant.flavorName:" + variant.flavorName)
-
-        if (!variant.buildType.isDebuggable()) {
-            publishing.publications.create(variant.name, MavenPublication) {
-                groupId "com.rex"
-                artifactId "qly"
-
-                // Since Android Gradle 3.6.0
-                // Ref: https://developer.android.google.cn/studio/build/maven-publish-plugin?hl=zh-cn
-                // Will generate ZIP contains APK and mapping TXT
-                //from components.getByName("${variant.name}_apk")
-
-                // Publish default APK package, for ApplicationVariant ApkVariant
-                artifact (new File(variant.packageApplicationProvider.get().getOutputDirectory().getAsFile().get(), variant.outputs[0].outputFileName)) {
-                    builtBy variant.assembleProvider.get()
-                }
-
-                // Publish mapping TXT
-                try {
-                    if (!variant.mappingFileProvider.get().isEmpty()) {
-                        artifact project.tasks.create("generateMappingZipFor${name.capitalize()}Publication", Zip) {
-                            classifier "mapping"
-                            group "publishing"
-                            baseName variant.baseName // Default ${project.name}-mapping.zip may conflict with other flavors
-                            from variant.mappingFileProvider.get()
-                        }
-                    }
-                } catch (Exception ex) {
-                    //ex.printStackTrace()
-                }
-
-                // Publish native stack ZIP
-                if (! variant.externalNativeBuildProviders.isEmpty()) {
-                    artifact project.tasks.create("generateStackZipFor${name.capitalize()}Publication", Zip) {
-                        classifier "stack"
-                        group "publishing"
-                        baseName variant.baseName // Default ${project.name}-stack.zip may conflict with other flavors
-                        variant.externalNativeBuildProviders.each { provider ->
-                            from provider.get().objFolder
-                        }
-                    }
-                }
-
-                // Publish sources JAR
-                //artifact project.tasks.create("generateSourceJarFor${name.capitalize()}Publication", Jar) {
-                //    classifier 'sources'
-                //    group 'publishing'
-                //    baseName variant.baseName // Default ${project.name}-sources.zip may conflict with other flavors
-                //    from variant.sourceSets.javaDirectories
-                //}
-            }
-        }
-    }
 }
 
 task cleanWebRoot(type: Delete) {
